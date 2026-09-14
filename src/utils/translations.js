@@ -110,6 +110,10 @@ export const translations = {
       title: "Historial médico completo",
       footer: "AURA Pets Global · Expediente médico digital",
       dismiss: "Cerrar aviso",
+      edit: "Corregir",
+      remove: "Borrar",
+      editing: "Corrigiendo un registro ya anotado",
+      saveEdit: "GUARDAR CAMBIOS",
       saveFailed: "No se ha podido guardar: {detalle}",
 
       tabVisits: "Visitas",
@@ -414,6 +418,10 @@ export const translations = {
       title: "Full medical record",
       footer: "AURA Pets Global · Digital medical record",
       dismiss: "Dismiss notice",
+      edit: "Edit",
+      remove: "Delete",
+      editing: "Editing an existing entry",
+      saveEdit: "SAVE CHANGES",
       saveFailed: "Could not save: {detalle}",
 
       tabVisits: "Visits",

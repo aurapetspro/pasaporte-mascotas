@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Plus, Download, Calendar, Shield, Activity, Award, FileText, Eye } from 'lucide-react';
+import { X, Plus, Download, Calendar, Shield, Activity, Award, FileText, Eye, Pencil } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import { storage } from '../../utils/storage';
 import { useAuth } from '../../context/AuthContext';
@@ -146,6 +146,7 @@ const MedicalHistory = ({ pet, onClose }) => {
   const [data, setData]           = useState(() => loadData(user?.id, pet.id));
   const [saveError, setSaveError]  = useState('');
   const [showForm, setShowForm]   = useState(false);
+  const [editando, setEditando]   = useState(null);   // id del registro que se corrige
   const [form, setForm]           = useState(EMPTY_VISIT);
   const [docPreview, setDocPreview] = useState(null);   // { dataUrl, type, name }
   const [viewDoc, setViewDoc]     = useState(null);     // { dataUrl, type, name }
@@ -214,29 +215,51 @@ const MedicalHistory = ({ pet, onClose }) => {
     });
   };
 
+  const VACIOS = { visits: EMPTY_VISIT, vaccines: EMPTY_VACCINE, medications: EMPTY_MED, analyses: EMPTY_ANALYSIS };
+
   const openForm = () => {
-    const empties = { visits: EMPTY_VISIT, vaccines: EMPTY_VACCINE, medications: EMPTY_MED, analyses: EMPTY_ANALYSIS };
-    setForm({ ...empties[tab] });
+    setForm({ ...VACIOS[tab] });
+    setEditando(null);
     setDocPreview(null);
+    setFileError('');
+    setShowForm(true);
+  };
+
+  /* Corregir lo que ya está anotado. Se carga tal cual en el formulario; el
+     documento adjunto viaja con él para no perderlo al guardar. */
+  const editarRegistro = (item) => {
+    const { id, document: adjunto, ...campos } = item;
+    setForm({ ...VACIOS[tab], ...campos });
+    setEditando(id);
+    setDocPreview(adjunto || null);
     setFileError('');
     setShowForm(true);
   };
 
   const cancelForm = () => {
     setShowForm(false);
+    setEditando(null);
     setDocPreview(null);
     setFileError('');
   };
 
   const submit = async () => {
     const { nextDoseSugerida, ...campos } = form;   // marca interna, no se guarda
-    const item = { id: Date.now(), ...campos };
+    const item = { id: editando ?? Date.now(), ...campos };
     if (tab === 'analyses' && docPreview) item.document = docPreview;
-    const ok = await persist({ ...data, [tab]: [item, ...data[tab]] });
+
+    /* Al corregir se sustituye en su sitio, sin moverlo de la lista: cambiar
+       el orden al guardar despista sobre qué se acaba de tocar. */
+    const lista = editando
+      ? data[tab].map(i => (i.id === editando ? item : i))
+      : [item, ...data[tab]];
+
+    const ok = await persist({ ...data, [tab]: lista });
     // Si el guardado falla, el formulario sigue abierto con lo escrito para
     // que el usuario pueda reintentar en lugar de perderlo.
     if (!ok) return;
     setShowForm(false);
+    setEditando(null);
     setDocPreview(null);
   };
 
@@ -275,6 +298,7 @@ const MedicalHistory = ({ pet, onClose }) => {
   const cardStyle = { background: '#FFFFFF', border: '1px solid var(--border)', borderRadius: 10, padding: '1.2rem', boxShadow: 'var(--shadow-sm, 0 1px 3px rgba(42,45,124,0.06))' };
   const mutedLabel = { margin: '0 0 3px', fontSize: '0.62rem', letterSpacing: '2px', color: 'var(--aura-text-muted)', textTransform: 'uppercase' };
   const deleteBtn  = { background: 'none', border: 'none', color: 'var(--ink-muted)', cursor: 'pointer', padding: 4, lineHeight: 1, flexShrink: 0 };
+  const editBtn    = { ...deleteBtn, color: 'var(--violet)' };
   const empty = (msg) => <p style={{ color: 'var(--aura-text-muted)', fontSize: '0.88rem', padding: '2.5rem 0', textAlign: 'center' }}>{msg}</p>;
 
   // ── Drop zone (solo Análisis) ──────────────────────────────────────────────
@@ -504,7 +528,10 @@ const MedicalHistory = ({ pet, onClose }) => {
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
                 {v.cost && <span style={{ fontWeight: 700, color: 'var(--gold-ink)' }}>{simbolo}{v.cost}</span>}
-                <button style={deleteBtn} onClick={() => remove('visits', v.id)}><X size={14} /></button>
+                <button style={editBtn} title={t('history.edit')} aria-label={t('history.edit')}
+                  onClick={() => editarRegistro(v)}><Pencil size={14} /></button>
+                <button style={deleteBtn} title={t('history.remove')} aria-label={t('history.remove')}
+                  onClick={() => remove('visits', v.id)}><X size={14} /></button>
               </div>
             </div>
             {(v.reason || v.diagnosis || v.treatment) && (
@@ -535,7 +562,10 @@ const MedicalHistory = ({ pet, onClose }) => {
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem', flexShrink: 0 }}>
               {st && <span style={{ padding: '4px 10px', borderRadius: 20, fontSize: '0.65rem', fontWeight: 700, letterSpacing: '1px', background: st.bg, color: st.color, border: `1px solid ${st.border}` }}>{st.label}</span>}
-              <button style={deleteBtn} onClick={() => remove('vaccines', v.id)}><X size={14} /></button>
+              <button style={editBtn} title={t('history.edit')} aria-label={t('history.edit')}
+                  onClick={() => editarRegistro(v)}><Pencil size={14} /></button>
+                <button style={deleteBtn} title={t('history.remove')} aria-label={t('history.remove')}
+                  onClick={() => remove('vaccines', v.id)}><X size={14} /></button>
             </div>
           </div>
         );
@@ -568,7 +598,10 @@ const MedicalHistory = ({ pet, onClose }) => {
                   {m.dose}{m.frequency ? ` · ${m.frequency}` : ''}{m.startDate ? ` · ${t('history.fromShort')}: ${m.startDate}` : ''}{m.endDate ? ` ${t('history.untilShort')} ${m.endDate}` : ''}
                 </p>
               </div>
-              <button style={deleteBtn} onClick={() => remove('medications', m.id)}><X size={14} /></button>
+              <button style={editBtn} title={t('history.edit')} aria-label={t('history.edit')}
+                  onClick={() => editarRegistro(m)}><Pencil size={14} /></button>
+                <button style={deleteBtn} title={t('history.remove')} aria-label={t('history.remove')}
+                  onClick={() => remove('medications', m.id)}><X size={14} /></button>
             </div>
           );
         })}
@@ -593,7 +626,10 @@ const MedicalHistory = ({ pet, onClose }) => {
                   {a.result}
                 </span>
               )}
-              <button style={deleteBtn} onClick={() => remove('analyses', a.id)}><X size={14} /></button>
+              <button style={editBtn} title={t('history.edit')} aria-label={t('history.edit')}
+                  onClick={() => editarRegistro(a)}><Pencil size={14} /></button>
+                <button style={deleteBtn} title={t('history.remove')} aria-label={t('history.remove')}
+                  onClick={() => remove('analyses', a.id)}><X size={14} /></button>
             </div>
           </div>
 
@@ -703,7 +739,7 @@ const MedicalHistory = ({ pet, onClose }) => {
             const active = tab === id;
             return (
               <button key={id}
-                onClick={() => { setTab(id); setShowForm(false); setDocPreview(null); setFileError(''); }}
+                onClick={() => { setTab(id); setShowForm(false); setEditando(null); setDocPreview(null); setFileError(''); }}
                 style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', padding: '0.9rem 1.4rem', background: 'none', border: 'none', cursor: 'pointer', borderBottom: active ? '2px solid var(--aura-gold)' : '2px solid transparent', color: active ? 'var(--gold-ink)' : 'var(--aura-text-muted)', fontSize: '0.8rem', fontWeight: active ? 600 : 400, letterSpacing: '0.5px', whiteSpace: 'nowrap', transition: 'color 0.2s' }}
               >
                 <Icon size={14} /> {t(k)}
@@ -724,10 +760,20 @@ const MedicalHistory = ({ pet, onClose }) => {
             </div>
           ) : (
             <div style={{ marginBottom: '1.2rem' }}>
+              {editando && (
+                <p style={{
+                  margin: '0 0 0.8rem', fontSize: '0.72rem', fontWeight: 600,
+                  letterSpacing: '1px', textTransform: 'uppercase', color: 'var(--violet)',
+                }}>
+                  {t('history.editing')}
+                </p>
+              )}
               {renderForm()}
               <div style={{ display: 'flex', gap: '0.7rem' }}>
                 <button className="btn-aura btn-ghost" style={{ flex: 1, fontSize: '0.75rem' }} onClick={cancelForm}>{t('common.cancel')}</button>
-                <button className="btn-aura" style={{ flex: 2, fontSize: '0.75rem' }} onClick={submit}>{t('common.save')}</button>
+                <button className="btn-aura" style={{ flex: 2, fontSize: '0.75rem' }} onClick={submit}>
+                  {editando ? t('history.saveEdit') : t('common.save')}
+                </button>
               </div>
             </div>
           )}
