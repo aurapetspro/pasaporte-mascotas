@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { ShieldCheck, Lock, EyeOff, Download, Trash2, ChevronRight, FileText, AlertTriangle, ExternalLink, X, BookOpen } from 'lucide-react';
+import { ShieldCheck, Lock, EyeOff, Download, Trash2, ChevronRight, FileText, AlertTriangle, ExternalLink, X, BookOpen, KeyRound } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from '../../context/LocalizationContext';
 import { useAuth } from '../../context/AuthContext';
 import { storage } from '../../utils/storage';
+import { vault } from '../../utils/vault';
 import jsPDF from 'jspdf';
 import { PawScatter } from './Decorations';
 
@@ -571,6 +572,168 @@ const DestructionModal = ({ onConfirm, onClose, locale }) => {
   );
 };
 
+/* ════════════════════════════════════════════════════════════════════════════
+   Seguridad de la cuenta
+
+   Dos operaciones que con el esquema de cifrado anterior no podían existir:
+
+   · Cambiar la contraseña. Antes la contraseña ERA la clave de los datos, así
+     que cambiarla habría obligado a descifrar y volver a cifrar el expediente
+     entero. Ahora solo se vuelve a envolver la misma clave de datos, y es
+     instantáneo aunque haya cien fotos dentro.
+
+   · Tener un código de recuperación. Antes, olvidar la contraseña era perder
+     el expediente. Las cuentas creadas hoy reciben el código al darse de alta;
+     las que vienen del esquema anterior no lo tienen, y aquí pueden crearlo.
+   ════════════════════════════════════════════════════════════════════════════ */
+const SeguridadCuenta = () => {
+  const { locale, t } = useTranslation();
+  const { user } = useAuth();
+  const es = locale === 'es';
+
+  const [abierto, setAbierto]   = useState(null);   // 'clave' | 'codigo' | null
+  const [actual, setActual]     = useState('');
+  const [nueva, setNueva]       = useState('');
+  const [nueva2, setNueva2]     = useState('');
+  const [aviso, setAviso]       = useState('');
+  const [hecho, setHecho]       = useState('');
+  const [codigo, setCodigo]     = useState(null);
+  const [cargando, setCargando] = useState(false);
+
+  const registro = storage.getUsers().find(u => u.id === user?.id);
+  const tieneCodigo = !!registro?.wrappedDekRecovery;
+
+  const limpiar = () => { setActual(''); setNueva(''); setNueva2(''); setAviso(''); };
+
+  const cambiarClave = async (e) => {
+    e.preventDefault();
+    setAviso(''); setHecho('');
+    if (nueva.length < 6)  { setAviso(t('recover.errShort'));    return; }
+    if (nueva !== nueva2)  { setAviso(t('recover.errMismatch')); return; }
+
+    setCargando(true);
+    try {
+      const actualizado = await vault.changePassword(registro, actual, nueva);
+      if (!actualizado) { setAviso(t('security.errWrongCurrent')); return; }
+      storage.updateUser(actualizado);
+      limpiar();
+      setAbierto(null);
+      setHecho(t('security.passChanged'));
+    } finally {
+      setCargando(false);
+    }
+  };
+
+  const generarCodigo = async () => {
+    setAviso(''); setHecho('');
+    setCargando(true);
+    try {
+      const nuevo = await vault.createRecoveryCode();
+      if (!nuevo) { setAviso(t('errors.VaultLockedError')); return; }
+      const { recoveryCode, ...envuelto } = nuevo;
+      storage.updateUser({ ...registro, ...envuelto });
+      setCodigo(recoveryCode);
+      setAbierto('codigo');
+    } finally {
+      setCargando(false);
+    }
+  };
+
+  const fila = {
+    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+    width: '100%', textAlign: 'left',
+  };
+
+  return (
+    <div className="aura-card" style={{ padding: '2rem', marginBottom: '1.5rem' }}>
+      <h3 style={{ margin: '0 0 1.5rem', fontSize: '1.1rem' }}>{t('security.title')}</h3>
+
+      <div style={{ display: 'grid', gap: '1rem' }}>
+        {/* ── Cambiar la contraseña ── */}
+        <button className="btn-aura" style={fila}
+          onClick={() => { setAbierto(abierto === 'clave' ? null : 'clave'); limpiar(); setHecho(''); }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
+            <Lock size={16} />
+            <div style={{ textAlign: 'left' }}>
+              <span style={{ display: 'block' }}>{t('security.changePass')}</span>
+              <span style={{ fontSize: '0.65rem', opacity: 0.85, letterSpacing: '0.5px' }}>
+                {t('security.changePassHint')}
+              </span>
+            </div>
+          </div>
+          <ChevronRight size={17} />
+        </button>
+
+        {abierto === 'clave' && (
+          <form onSubmit={cambiarClave} style={{ display: 'grid', gap: '0.9rem', padding: '0 0.2rem' }}>
+            <input type="password" required className="aura-input" autoComplete="current-password"
+              placeholder={t('security.currentPass')} value={actual} onChange={e => setActual(e.target.value)} />
+            <input type="password" required className="aura-input" autoComplete="new-password"
+              placeholder={t('recover.newPass')} value={nueva} onChange={e => setNueva(e.target.value)} />
+            <input type="password" required className="aura-input" autoComplete="new-password"
+              placeholder={t('recover.confirmPass')} value={nueva2} onChange={e => setNueva2(e.target.value)} />
+            <p style={{ margin: 0, fontSize: '0.72rem', lineHeight: 1.6, color: 'var(--ink-muted)' }}>
+              {t('security.changePassNote')}
+            </p>
+            {aviso && <p style={{ margin: 0, fontSize: '0.76rem', color: 'var(--pink-ink)' }}>{aviso}</p>}
+            <button type="submit" disabled={cargando} className="btn-aura" style={{ fontSize: '0.72rem' }}>
+              {cargando ? t('recover.btnSetting') : t('security.changePass')}
+            </button>
+          </form>
+        )}
+
+        {/* ── Código de recuperación ── */}
+        <button className="btn-aura btn-ghost" style={{ ...fila, '--btn-accent': 'var(--gold-ink)' }}
+          onClick={generarCodigo} disabled={cargando}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
+            <KeyRound size={16} />
+            <div style={{ textAlign: 'left' }}>
+              <span style={{ display: 'block' }}>
+                {tieneCodigo ? t('security.replaceCode') : t('security.createCode')}
+              </span>
+              <span style={{ fontSize: '0.65rem', opacity: 0.85, letterSpacing: '0.5px' }}>
+                {tieneCodigo ? t('security.replaceCodeHint') : t('security.createCodeHint')}
+              </span>
+            </div>
+          </div>
+          <ChevronRight size={17} />
+        </button>
+
+        {abierto === 'codigo' && codigo && (
+          <div style={{ display: 'grid', gap: '0.8rem', padding: '0 0.2rem' }}>
+            <div style={{
+              background: 'var(--bg-soft)', border: '1.5px solid var(--border-strong)',
+              borderRadius: 12, padding: '1rem', textAlign: 'center',
+            }}>
+              <p style={{ margin: 0, fontFamily: 'var(--font-mono, monospace)', fontSize: '1rem',
+                fontWeight: 700, letterSpacing: '2px', color: 'var(--ink)', wordBreak: 'break-all' }}>
+                {codigo}
+              </p>
+            </div>
+            <p style={{ margin: 0, fontSize: '0.76rem', lineHeight: 1.65, color: 'var(--ink-body)' }}>
+              {t('recoveryCode.warning')}
+            </p>
+            <button type="button" className="btn-aura btn-ghost" style={{ fontSize: '0.72rem' }}
+              onClick={() => { setAbierto(null); setCodigo(null); }}>
+              {t('security.codeSaved')}
+            </button>
+          </div>
+        )}
+
+        {hecho && (
+          <p role="status" style={{
+            margin: 0, padding: '0.7rem 0.9rem', fontSize: '0.78rem', lineHeight: 1.6,
+            background: 'rgba(63, 191, 160, 0.10)', borderLeft: '3px solid var(--ok)',
+            borderRadius: '0 8px 8px 0', color: 'var(--ink-body)',
+          }}>
+            {hecho}
+          </p>
+        )}
+      </div>
+    </div>
+  );
+};
+
 /* ════════════════ Main Component ════════════════ */
 const PrivacyVault = () => {
   const { locale, t, units } = useTranslation();
@@ -759,6 +922,14 @@ const PrivacyVault = () => {
               </span>
             </div>
           </div>
+
+          {/* ── Seguridad de la cuenta ──────────────────────────────────────
+              Las dos cosas que antes no se podían hacer. Cambiar la
+              contraseña no existía —con el esquema anterior habría obligado a
+              volver a cifrar el expediente entero—, y el código de
+              recuperación no existía en absoluto: olvidar la contraseña era
+              perderlo todo. */}
+          <SeguridadCuenta />
 
           {/* Data management */}
           <div className="aura-card" style={{ padding: '2rem', borderStyle: 'dashed' }}>

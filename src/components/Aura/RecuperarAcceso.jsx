@@ -7,94 +7,73 @@ import { useTranslation } from '../../context/LocalizationContext';
 import { vault } from '../../utils/vault';
 import { storage } from '../../utils/storage';
 
-/* ── Client-side token: stored in localStorage ── */
-const TOKEN_TTL_MS = 20 * 60 * 1000; // 20 min
+/* ══════════════════════════════════════════════════════════════════════════
+   Recuperar acceso
+   Ruta: /recuperar-acceso
 
-const generateCode = () => Math.floor(100000 + Math.random() * 900000).toString();
+   Antes esto era un simulacro. Generaba un código de seis cifras, lo enseñaba
+   en la propia pantalla —no hay servidor que mande correos— y al terminar
+   BORRABA el expediente entero, porque la contraseña era la clave de los
+   datos y sin ella no había nada que descifrar. Es decir: pedía un código a
+   quien ya lo estaba viendo, para después perderlo todo.
 
-/* ══════════════════════════════════════════════
-   RecuperarAcceso
-   Route: /recuperar-acceso
-   Flow:
-     Step 1 — enter email
-     Step 2 — enter 6-digit code (shown locally, email requires backend)
-     Step 3 — set new password
-══════════════════════════════════════════════ */
+   Ahora el código de recuperación es real. Se entrega al crear la cuenta, no
+   se guarda en ninguna parte, y abre una segunda envoltura de la misma clave
+   de datos. Por eso recuperar el acceso ya no cuesta el expediente.
+
+   Dos pasos:
+     1 — correo y código de recuperación
+     2 — contraseña nueva
+   ══════════════════════════════════════════════════════════════════════════ */
 const RecuperarAcceso = () => {
   const navigate = useNavigate();
   const { t } = useTranslation();
-  const [step,     setStep]     = useState(1);
-  const [email,    setEmail]    = useState('');
-  const [code,     setCode]     = useState('');
-  const [newPass,  setNewPass]  = useState('');
-  const [newPass2, setNewPass2] = useState('');
-  const [confirmed, setConfirmed] = useState(false);
-  const [error,    setError]    = useState('');
-  const [loading,  setLoading]  = useState(false);
-  const [localCode, setLocalCode] = useState(''); // shown in demo banner
+  const [step,      setStep]      = useState(1);
+  const [email,     setEmail]     = useState('');
+  const [code,      setCode]      = useState('');
+  const [newPass,   setNewPass]   = useState('');
+  const [newPass2,  setNewPass2]  = useState('');
+  const [error,     setError]     = useState('');
+  const [loading,   setLoading]   = useState(false);
+  const [cuenta,    setCuenta]    = useState(null);   // usuario localizado en el paso 1
 
-  /* ── Step 1: validate email exists ── */
-  const handleRequestCode = (e) => {
+  const campo = { display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.7rem',
+    color: 'var(--gold-ink)', fontSize: '0.75rem', letterSpacing: '1px', fontWeight: 600 };
+
+  /* ── Paso 1 ──────────────────────────────────────────────────────────────
+     Se localiza la cuenta y se comprueba que tenga código de recuperación.
+     No se valida aquí el código en sí: eso lo hace el desenvuelto de la clave
+     en el paso siguiente, que es donde de verdad se autentica. */
+  const handleBuscarCuenta = (e) => {
     e.preventDefault();
     setError('');
-    const users = JSON.parse(localStorage.getItem('mascota_health_users') || '[]');
-    const user  = users.find(u => u.email.toLowerCase() === email.toLowerCase());
 
-    if (!user) {
-      /* Don't reveal if email exists (security best-practice) */
-      /* Still proceed to step 2 to prevent enumeration */
-    }
+    const users = storage.getUsers();
+    const user = users.find(u => u.email?.toLowerCase() === email.trim().toLowerCase());
 
-    const token = generateCode();
-    const expiry = Date.now() + TOKEN_TTL_MS;
-    localStorage.setItem(`aura_reset_${email.toLowerCase()}`, JSON.stringify({ token, expiry }));
-    setLocalCode(token); // only shown because there's no backend mailer
+    if (!user) { setError(t('recover.errNoAccount')); return; }
+    if (!user.wrappedDekRecovery) { setError(t('recover.errNoRecoveryCode')); return; }
+
+    setCuenta(user);
     setStep(2);
   };
 
-  /* ── Step 2: verify code ── */
-  const handleVerifyCode = (e) => {
+  /* ── Paso 2 ──────────────────────────────────────────────────────────── */
+  const handleRecuperar = async (e) => {
     e.preventDefault();
     setError('');
-    const raw = localStorage.getItem(`aura_reset_${email.toLowerCase()}`);
-    if (!raw) { setError(t('recover.errCodeGone')); return; }
-    const { token, expiry } = JSON.parse(raw);
-    if (Date.now() > expiry) { setError(t('recover.errExpired')); return; }
-    if (code.trim() !== token) { setError(t('recover.errWrongCode')); return; }
-    setStep(3);
-  };
 
-  /* ── Step 3: set new password ── */
-  const handleResetPassword = async (e) => {
-    e.preventDefault();
-    setError('');
-    if (newPass.length < 6) { setError(t('recover.errShort')); return; }
-    if (newPass !== newPass2) { setError(t('recover.errMismatch')); return; }
-    if (!confirmed) { setError(t('recover.errNotConfirmed')); return; }
+    if (newPass.length < 6)    { setError(t('recover.errShort'));    return; }
+    if (newPass !== newPass2)  { setError(t('recover.errMismatch')); return; }
+
     setLoading(true);
     try {
-      const users = storage.getUsers();
-      const target = users.find(u => u.email.toLowerCase() === email.toLowerCase());
-      if (!target) { setError(t('recover.errNoAccount')); return; }
+      const actualizado = await vault.recoverWithCode(cuenta, code, newPass);
+      if (!actualizado) { setError(t('recover.errWrongCode')); return; }
 
-      // La clave de cifrado se deriva de la contraseña. Sin la contraseña
-      // anterior no hay forma de descifrar lo guardado, así que restablecerla
-      // obliga a partir de una bóveda nueva y vacía: lo contrario dejaría al
-      // usuario con una cuenta que abre pero cuyos datos no puede leer nadie.
-      Object.keys(localStorage).forEach(key => {
-        if (key.startsWith(`vault_${target.id}_`)) localStorage.removeItem(key);
-      });
-
-      const { salt, verifier } = await vault.createSession(target.id, newPass);
-      vault.lock(); // que tenga que iniciar sesión de forma explícita
-
-      const rebuilt = { id: target.id, email: target.email, salt, verifier };
-      localStorage.setItem(
-        'mascota_health_users',
-        JSON.stringify(users.map(u => (u.id === target.id ? rebuilt : u))),
-      );
-      localStorage.removeItem(`aura_reset_${email.toLowerCase()}`);
-      setStep(4);
+      storage.updateUser(actualizado);
+      vault.lock();   // que entre de forma explícita con la contraseña nueva
+      setStep(3);
     } catch {
       setError(t('recover.errUpdate'));
     } finally {
@@ -108,7 +87,6 @@ const RecuperarAcceso = () => {
       minHeight: '100vh', background: 'var(--aura-black)', padding: '1.5rem',
     }}>
       <div className="aura-card" style={{ width: '100%', maxWidth: 440, textAlign: 'center' }}>
-        {/* Logo */}
         <header style={{ marginBottom: '2.5rem' }}>
           <img src={logo} alt="AURA" style={{ height: 58, marginBottom: '1.5rem', filter: 'drop-shadow(0 0 10px rgba(217, 164, 65, 0.35))' }} />
           <h1 style={{ fontSize: '1.8rem', margin: '0 0 0.4rem' }}>
@@ -121,156 +99,98 @@ const RecuperarAcceso = () => {
 
         <AnimatePresence mode="wait">
 
-          {/* ── Step 1 ── */}
+          {/* ── Paso 1: correo ── */}
           {step === 1 && (
             <motion.form key="s1"
               initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}
-              onSubmit={handleRequestCode}
+              onSubmit={handleBuscarCuenta}
               style={{ display: 'grid', gap: '1.5rem', textAlign: 'left' }}
             >
-              <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--aura-text-muted)', lineHeight: 1.7, textAlign: 'center' }}>
+              <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--ink-body)', lineHeight: 1.7, textAlign: 'center' }}>
                 {t('recover.step1Intro')}
               </p>
               <div className="input-group">
-                <label style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.7rem', color: 'var(--gold-ink)', fontSize: '0.75rem', letterSpacing: '1px', fontWeight: 600 }}>
-                  <Mail size={14} /> {t('auth.emailLabel')}
-                </label>
-                <input type="email" required
-                  className="aura-input"
+                <label style={campo}><Mail size={14} /> {t('auth.emailLabel')}</label>
+                <input type="email" required className="aura-input"
                   placeholder={t('auth.emailPlaceholder')}
-                  value={email}
-                  onChange={e => setEmail(e.target.value)}
-                />
+                  value={email} onChange={e => setEmail(e.target.value)} />
               </div>
-              {error && <p style={{ color: 'var(--pink-ink)', fontSize: '0.78rem', margin: 0 }}>{error}</p>}
+              {error && <p style={{ color: 'var(--pink-ink)', fontSize: '0.78rem', margin: 0, lineHeight: 1.6 }}>{error}</p>}
               <button type="submit" className="btn-aura" style={{ padding: '1.1rem', width: '100%' }}>
-                {t('recover.btnRequest')}
+                {t('recover.btnContinue')}
               </button>
             </motion.form>
           )}
 
-          {/* ── Step 2 ── */}
+          {/* ── Paso 2: código y contraseña nueva ── */}
           {step === 2 && (
             <motion.form key="s2"
               initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}
-              onSubmit={handleVerifyCode}
+              onSubmit={handleRecuperar}
               style={{ display: 'grid', gap: '1.5rem', textAlign: 'left' }}
             >
-              {/* Demo banner — shown because there's no backend mailer */}
-              <div style={{
-                background: 'rgba(217, 164, 65, 0.07)', border: '1px solid rgba(217, 164, 65, 0.3)',
-                borderRadius: 4, padding: '1rem 1.2rem',
-              }}>
-                <p style={{ margin: '0 0 4px', fontSize: '0.68rem', letterSpacing: '2px', color: 'var(--gold-ink)', textTransform: 'uppercase' }}>
-                  {t('recover.codeGenerated')}
-                </p>
-                <p style={{ margin: 0, fontSize: '1.8rem', fontWeight: 800, letterSpacing: '8px', color: 'var(--gold-ink)' }}>
-                  {localCode}
-                </p>
-                <p style={{ margin: '8px 0 0', fontSize: '0.65rem', color: 'var(--aura-text-muted)', lineHeight: 1.6 }}>
-                  {t('recover.codeNote')}
-                </p>
-              </div>
-
-              <div className="input-group">
-                <label style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.7rem', color: 'var(--gold-ink)', fontSize: '0.75rem', letterSpacing: '1px', fontWeight: 600 }}>
-                  <KeyRound size={14} /> {t('recover.codeLabel')}
-                </label>
-                <input type="text" required maxLength={6}
-                  className="aura-input"
-                  placeholder="000000"
-                  value={code}
-                  onChange={e => setCode(e.target.value.replace(/\D/g, ''))}
-                  style={{ textAlign: 'center', letterSpacing: '8px', fontSize: '1.4rem' }}
-                />
-              </div>
-              {error && <p style={{ color: 'var(--pink-ink)', fontSize: '0.78rem', margin: 0 }}>{error}</p>}
-              <button type="submit" className="btn-aura" style={{ padding: '1.1rem', width: '100%' }}>
-                {t('recover.btnVerify')}
-              </button>
-            </motion.form>
-          )}
-
-          {/* ── Step 3 ── */}
-          {step === 3 && (
-            <motion.form key="s3"
-              initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}
-              onSubmit={handleResetPassword}
-              style={{ display: 'grid', gap: '1.5rem', textAlign: 'left' }}
-            >
-              <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--aura-text-muted)', lineHeight: 1.7, textAlign: 'center' }}>
-                {t('recover.step3Intro')}
-              </p>
-
-              {/* El cifrado no tiene puerta trasera: hay que decirlo antes, no después */}
+              {/* Lo contrario del aviso que había antes: aquí no se pierde nada */}
               <div style={{
                 display: 'flex', gap: '0.8rem', alignItems: 'flex-start',
-                padding: '1rem 1.1rem', background: 'rgba(236, 92, 141, 0.06)',
-                border: '1px solid rgba(236, 92, 141, 0.32)', borderRadius: '0.6rem',
+                padding: '1rem 1.1rem', background: 'rgba(63, 191, 160, 0.08)',
+                border: '1px solid rgba(63, 191, 160, 0.35)', borderRadius: '0.6rem',
               }}>
-                <AlertTriangle size={17} color="var(--aura-neon-pink)" style={{ flexShrink: 0, marginTop: 2 }} />
-                <div>
-                  <p style={{ margin: '0 0 0.5rem', fontSize: '0.78rem', lineHeight: 1.65, color: '#C93B5C', fontWeight: 600 }}>
-                    {t('recover.warnTitle')}
-                  </p>
-                  <p style={{ margin: 0, fontSize: '0.75rem', lineHeight: 1.65, color: 'var(--aura-text-muted)' }}>
-                    {t('recover.warnBody')}
-                  </p>
-                </div>
+                <CheckCircle2 size={17} color="var(--ok)" style={{ flexShrink: 0, marginTop: 2 }} />
+                <p style={{ margin: 0, fontSize: '0.78rem', lineHeight: 1.65, color: 'var(--ink-body)' }}>
+                  {t('recover.keepsData')}
+                </p>
               </div>
 
-              <label style={{
-                display: 'flex', gap: '0.7rem', alignItems: 'flex-start', cursor: 'pointer',
-                fontSize: '0.78rem', lineHeight: 1.6, color: 'var(--aura-text-muted)',
-              }}>
-                <input
-                  type="checkbox"
-                  checked={confirmed}
-                  onChange={e => setConfirmed(e.target.checked)}
-                  style={{ marginTop: 3, accentColor: 'var(--aura-gold)', width: 16, height: 16, flexShrink: 0 }}
-                />
-                <span>{t('recover.confirmCheck')}</span>
-              </label>
               <div className="input-group">
-                <label style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.7rem', color: 'var(--gold-ink)', fontSize: '0.75rem', letterSpacing: '1px', fontWeight: 600 }}>
-                  {t('recover.newPass')}
-                </label>
-                <input type="password" required
-                  className="aura-input"
-                  placeholder="••••••••"
-                  value={newPass}
-                  onChange={e => setNewPass(e.target.value)}
-                />
+                <label style={campo}><KeyRound size={14} /> {t('recover.codeLabel')}</label>
+                <input type="text" required className="aura-input"
+                  placeholder="AURA-XXXX-XXXX-XXXX-XXXX"
+                  value={code} onChange={e => setCode(e.target.value)}
+                  style={{ letterSpacing: '1px' }} />
+                <p style={{ margin: '0.45rem 0 0', fontSize: '0.72rem', color: 'var(--ink-muted)', lineHeight: 1.5 }}>
+                  {t('recover.codeHint')}
+                </p>
+              </div>
+
+              <div className="input-group">
+                <label style={campo}>{t('recover.newPass')}</label>
+                <input type="password" required className="aura-input" placeholder="••••••••"
+                  value={newPass} onChange={e => setNewPass(e.target.value)} />
               </div>
               <div className="input-group">
-                <label style={{ marginBottom: '0.7rem', color: 'var(--gold-ink)', fontSize: '0.75rem', letterSpacing: '1px', fontWeight: 600, display: 'block' }}>
-                  {t('recover.confirmPass')}
-                </label>
-                <input type="password" required
-                  className="aura-input"
-                  placeholder="••••••••"
-                  value={newPass2}
-                  onChange={e => setNewPass2(e.target.value)}
-                />
+                <label style={{ ...campo, display: 'block' }}>{t('recover.confirmPass')}</label>
+                <input type="password" required className="aura-input" placeholder="••••••••"
+                  value={newPass2} onChange={e => setNewPass2(e.target.value)} />
               </div>
-              {error && <p style={{ color: 'var(--pink-ink)', fontSize: '0.78rem', margin: 0 }}>{error}</p>}
+
+              {error && <p style={{ color: 'var(--pink-ink)', fontSize: '0.78rem', margin: 0, lineHeight: 1.6 }}>{error}</p>}
               <button type="submit" disabled={loading} className="btn-aura" style={{ padding: '1.1rem', width: '100%' }}>
                 {loading ? t('recover.btnSetting') : t('recover.btnSet')}
               </button>
             </motion.form>
           )}
 
-          {/* ── Step 4: Success ── */}
-          {step === 4 && (
-            <motion.div key="s4"
+          {/* ── Paso 3: hecho ── */}
+          {step === 3 && (
+            <motion.div key="s3"
               initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
               style={{ display: 'grid', gap: '1.5rem' }}
             >
-              <CheckCircle2 size={56} color="var(--aura-neon-cyan)" style={{ margin: '0 auto', filter: 'drop-shadow(0 0 16px rgba(67, 191, 199, 0.4))' }} />
+              <CheckCircle2 size={56} color="var(--ok)" style={{ margin: '0 auto' }} />
               <h2 style={{ color: 'var(--cyan-ink)', margin: 0 }}>{t('recover.doneTitle')}</h2>
-              <p style={{ color: 'var(--aura-text-muted)', fontSize: '0.82rem', margin: 0 }}>
+              <p style={{ color: 'var(--ink-body)', fontSize: '0.82rem', margin: 0, lineHeight: 1.7 }}>
                 {t('recover.doneBody')}
               </p>
+              <div style={{
+                display: 'flex', gap: '0.8rem', alignItems: 'flex-start', textAlign: 'left',
+                padding: '0.9rem 1rem', background: 'rgba(240, 167, 60, 0.10)',
+                borderLeft: '3px solid var(--warn)', borderRadius: '0 8px 8px 0',
+              }}>
+                <AlertTriangle size={16} color="var(--gold-ink)" style={{ flexShrink: 0, marginTop: 2 }} />
+                <p style={{ margin: 0, fontSize: '0.76rem', lineHeight: 1.6, color: 'var(--ink-body)' }}>
+                  {t('recover.doneNewCode')}
+                </p>
+              </div>
               <button className="btn-aura" style={{ padding: '1.1rem' }} onClick={() => navigate('/')}>
                 {t('recover.btnGo')}
               </button>
@@ -279,10 +199,9 @@ const RecuperarAcceso = () => {
 
         </AnimatePresence>
 
-        {/* Back link */}
-        {step < 4 && (
+        {step < 3 && (
           <button
-            style={{ background: 'none', border: 'none', color: 'var(--aura-text-muted)', fontSize: '0.75rem', cursor: 'pointer', marginTop: '2rem', display: 'flex', alignItems: 'center', gap: '0.4rem', margin: '2rem auto 0' }}
+            style={{ background: 'none', border: 'none', color: 'var(--aura-text-muted)', fontSize: '0.75rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.4rem', margin: '2rem auto 0' }}
             onClick={() => step > 1 ? setStep(s => s - 1) : navigate('/')}
           >
             <ArrowLeft size={13} /> {t(step > 1 ? 'recover.back' : 'recover.backToLogin')}

@@ -38,6 +38,10 @@ const Auth = () => {
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  /* Código de recuperación recién creado: se enseña antes de entrar. */
+  const [codigoNuevo, setCodigoNuevo] = useState(null);
+  const [codigoGuardado, setCodigoGuardado] = useState(false);
+  const [copiado, setCopiado] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -53,11 +57,13 @@ const Auth = () => {
           return;
         }
         const id = Date.now().toString();
-        // Deriva la clave AES de la contraseña y abre la bóveda del usuario
-        const { salt, verifier } = await vault.createSession(id, formData.password);
-        const newUser = { id, email: formData.email, salt, verifier };
+        /* Sortea la clave de datos, la envuelve con la contraseña y abre la
+           bóveda. El código de recuperación viene aparte y no se guarda. */
+        const { recoveryCode, ...claves } = await vault.createSession(id, formData.password);
+        const newUser = { id, email: formData.email, ...claves };
         storage.saveUser(newUser);
-        login(newUser);
+        /* No se entra todavía: primero hay que enseñar el código. */
+        setCodigoNuevo({ codigo: recoveryCode, usuario: newUser });
       } else {
         const candidate = users.find(u => u.email === formData.email);
         // openSession valida la contraseña y descifra el expediente. Devuelve el
@@ -77,6 +83,89 @@ const Auth = () => {
       setLoading(false);
     }
   };
+
+  /* ── El código de recuperación, una sola vez ────────────────────────────
+     Se enseña entre crear la cuenta y entrar en ella. No hay «verlo más
+     tarde»: de él solo queda guardada la clave de datos envuelta, que sin el
+     código no abre. Por eso la casilla es obligatoria — no para cubrirnos,
+     sino porque quien pase de largo pierde la única red que tiene. */
+  if (codigoNuevo) {
+    return (
+      <div className="auth-container fade-in" style={{
+        display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh',
+        background: 'var(--aura-black)', padding: '1.5rem',
+      }}>
+        <div className="aura-card" style={{ width: '100%', maxWidth: 480 }}>
+          <div style={{ textAlign: 'center', marginBottom: '1.8rem' }}>
+            <KeyRound size={30} color="var(--gold-ink)" style={{ marginBottom: '0.9rem' }} />
+            <h2 style={{ fontSize: '1.45rem', margin: '0 0 0.5rem' }}>{t('recoveryCode.title')}</h2>
+            <p style={{ margin: 0, fontSize: '0.82rem', lineHeight: 1.7, color: 'var(--ink-body)' }}>
+              {t('recoveryCode.intro')}
+            </p>
+          </div>
+
+          <div style={{
+            background: 'var(--bg-soft)', border: '1.5px solid var(--border-strong)',
+            borderRadius: 12, padding: '1.2rem', textAlign: 'center', marginBottom: '1rem',
+          }}>
+            <p style={{
+              margin: 0, fontFamily: 'var(--font-mono, monospace)', fontSize: '1.1rem',
+              fontWeight: 700, letterSpacing: '2px', color: 'var(--ink)', wordBreak: 'break-all',
+            }}>
+              {codigoNuevo.codigo}
+            </p>
+          </div>
+
+          <button
+            type="button"
+            className="btn-aura btn-ghost"
+            style={{ width: '100%', marginBottom: '1.4rem', fontSize: '0.72rem' }}
+            onClick={() => {
+              navigator.clipboard?.writeText(codigoNuevo.codigo)
+                .then(() => { setCopiado(true); setTimeout(() => setCopiado(false), 2500); })
+                .catch(() => {});
+            }}
+          >
+            {copiado ? t('recoveryCode.copied') : t('recoveryCode.copy')}
+          </button>
+
+          <div style={{
+            display: 'flex', gap: '0.8rem', alignItems: 'flex-start',
+            padding: '0.9rem 1rem', marginBottom: '1.4rem',
+            background: 'rgba(240, 167, 60, 0.10)', borderLeft: '3px solid var(--warn)',
+            borderRadius: '0 8px 8px 0',
+          }}>
+            <p style={{ margin: 0, fontSize: '0.78rem', lineHeight: 1.65, color: 'var(--ink-body)' }}>
+              {t('recoveryCode.warning')}
+            </p>
+          </div>
+
+          <label style={{
+            display: 'flex', gap: '0.7rem', alignItems: 'flex-start', cursor: 'pointer',
+            fontSize: '0.8rem', lineHeight: 1.6, color: 'var(--ink-body)', marginBottom: '1.4rem',
+          }}>
+            <input
+              type="checkbox"
+              checked={codigoGuardado}
+              onChange={e => setCodigoGuardado(e.target.checked)}
+              style={{ marginTop: 3, accentColor: 'var(--violet)', width: 16, height: 16, flexShrink: 0 }}
+            />
+            <span>{t('recoveryCode.confirm')}</span>
+          </label>
+
+          <button
+            type="button"
+            className="btn-aura"
+            style={{ width: '100%', padding: '1.1rem', opacity: codigoGuardado ? 1 : 0.5 }}
+            disabled={!codigoGuardado}
+            onClick={() => login(codigoNuevo.usuario)}
+          >
+            {t('recoveryCode.continue')}
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>

@@ -11,6 +11,7 @@
     "normativa": "node scripts/comprobar-normativa.mjs",
     "castellano": "node scripts/buscar-castellano.mjs",
     "probar": "node scripts/probar-vacunas.mjs",
+    "probar-boveda": "node scripts/probar-boveda.mjs",
     "preview": "vite preview"
   },
   "dependencies": {
