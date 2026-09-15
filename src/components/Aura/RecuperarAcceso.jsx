@@ -36,6 +36,10 @@ const RecuperarAcceso = () => {
   const [error,     setError]     = useState('');
   const [loading,   setLoading]   = useState(false);
   const [cuenta,    setCuenta]    = useState(null);   // usuario localizado en el paso 1
+  /* Encontrar la cuenta y que no tenga código NO es un error del usuario: es
+     una cuenta anterior a que los códigos existieran. Mezclarlo con «el correo
+     no vale» hace pensar que uno se ha equivocado escribiendo. */
+  const [sinCodigo, setSinCodigo] = useState(false);
 
   const campo = { display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.7rem',
     color: 'var(--gold-ink)', fontSize: '0.75rem', letterSpacing: '1px', fontWeight: 600 };
@@ -47,12 +51,13 @@ const RecuperarAcceso = () => {
   const handleBuscarCuenta = (e) => {
     e.preventDefault();
     setError('');
+    setSinCodigo(false);
 
     const users = storage.getUsers();
     const user = users.find(u => u.email?.toLowerCase() === email.trim().toLowerCase());
 
     if (!user) { setError(t('recover.errNoAccount')); return; }
-    if (!user.wrappedDekRecovery) { setError(t('recover.errNoRecoveryCode')); return; }
+    if (!user.wrappedDekRecovery) { setSinCodigo(true); return; }
 
     setCuenta(user);
     setStep(2);
@@ -116,9 +121,33 @@ const RecuperarAcceso = () => {
                   value={email} onChange={e => setEmail(e.target.value)} />
               </div>
               {error && <p style={{ color: 'var(--pink-ink)', fontSize: '0.78rem', margin: 0, lineHeight: 1.6 }}>{error}</p>}
-              <button type="submit" className="btn-aura" style={{ padding: '1.1rem', width: '100%' }}>
-                {t('recover.btnContinue')}
-              </button>
+
+              {/* La cuenta existe, pero es anterior a los códigos de
+                  recuperación. No hay nada que corregir en este formulario, así
+                  que en vez de un error rojo se explica qué pasa y se manda al
+                  único sitio donde se arregla. */}
+              {sinCodigo ? (
+                <div style={{
+                  padding: '1rem 1.1rem', textAlign: 'left',
+                  background: 'rgba(240, 167, 60, 0.10)', borderLeft: '3px solid var(--warn)',
+                  borderRadius: '0 8px 8px 0',
+                }}>
+                  <p style={{ margin: '0 0 0.5rem', fontSize: '0.8rem', fontWeight: 700, color: 'var(--gold-ink)' }}>
+                    {t('recover.noCodeTitle')}
+                  </p>
+                  <p style={{ margin: '0 0 0.9rem', fontSize: '0.78rem', lineHeight: 1.65, color: 'var(--ink-body)' }}>
+                    {t('recover.noCodeBody')}
+                  </p>
+                  <button type="button" className="btn-aura" style={{ width: '100%', fontSize: '0.72rem' }}
+                    onClick={() => navigate('/')}>
+                    {t('recover.noCodeAction')}
+                  </button>
+                </div>
+              ) : (
+                <button type="submit" className="btn-aura" style={{ padding: '1.1rem', width: '100%' }}>
+                  {t('recover.btnContinue')}
+                </button>
+              )}
             </motion.form>
           )}
 
