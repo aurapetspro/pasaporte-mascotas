@@ -291,20 +291,41 @@ const Auth = () => {
               value={formData.password}
               onChange={(e) => setFormData({ ...formData, password: e.target.value })}
             />
-            {/* Con cifrado real no hay recuperación posible: se avisa antes de
-                elegir la contraseña, no después de perderla. */}
+            {/* ── El aviso que hay que leer antes, no después ──────────────
+                Iba en gris claro, a 0,73 rem, debajo del campo: del tamaño y
+                del color de una nota al pie. Y lo que dice no es una nota al
+                pie, es la regla que gobierna todo lo demás — quien pierde las
+                dos llaves pierde el expediente, y no hay nada que podamos
+                hacer. Un aviso que nadie lee es un aviso que no existe.
+
+                El texto también estaba desfasado: decía que olvidar la
+                contraseña era perderlo todo, y desde que hay código de
+                recuperación eso ya no es exacto. Media verdad en un aviso de
+                este peso es peor que ninguna. */}
             {isRegister && (
-              <p style={{
-                display: 'flex', alignItems: 'flex-start', gap: '0.5rem',
-                margin: '0.8rem 0 0', fontSize: '0.73rem', lineHeight: 1.55,
-                color: 'var(--aura-text-muted)',
+              <div style={{
+                margin: '1.1rem 0 0',
+                padding: '1rem 1.1rem',
+                background: 'rgba(240, 167, 60, 0.12)',
+                border: '1.5px solid rgba(240, 167, 60, 0.55)',
+                borderRadius: 10,
+                textAlign: 'left',
               }}>
-                <KeyRound size={13} style={{ flexShrink: 0, marginTop: 2, color: 'var(--gold-ink)' }} />
-                <span>
-                  {t('auth.passWarning')}
-                  <strong style={{ color: 'var(--gold-ink)' }}> {t('auth.passWarningStrong')}</strong>.
-                </span>
-              </p>
+                <p style={{
+                  display: 'flex', alignItems: 'center', gap: '0.5rem',
+                  margin: '0 0 0.5rem', fontSize: '0.8rem', fontWeight: 700,
+                  color: 'var(--gold-ink)',
+                }}>
+                  <KeyRound size={15} style={{ flexShrink: 0 }} />
+                  {t('auth.warnTitle')}
+                </p>
+                <p style={{ margin: '0 0 0.6rem', fontSize: '0.78rem', lineHeight: 1.65, color: 'var(--ink-body)' }}>
+                  {t('auth.warnBody')}
+                </p>
+                <p style={{ margin: 0, fontSize: '0.78rem', lineHeight: 1.65, color: 'var(--ink-body)' }}>
+                  <strong>{t('auth.warnNoBackdoor')}</strong>
+                </p>
+              </div>
             )}
           </div>
 
