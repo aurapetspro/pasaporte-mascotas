@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { Link } from 'react-router-dom';
 import { useTranslation } from '../context/LocalizationContext';
 import { vault } from '../utils/vault';
 import { storage } from '../utils/storage';
@@ -259,9 +260,19 @@ const Auth = () => {
                 <span style={{ flex: 1, height: 1, background: 'var(--border)' }} />
               </div>
             )}
+            {/* Con <a href="/recuperar-acceso"> no pasaba nada, y era por el
+                tipo de enrutador. La aplicación usa HashRouter, donde las
+                rutas viven detrás de la almohadilla: #/recuperar-acceso. Un
+                enlace absoluto hacía que el navegador pidiera al servidor una
+                página que no existe, éste devolvía el index de siempre, y la
+                app volvía a arrancar en la pantalla de acceso. Desde fuera,
+                pulsar el enlace no hacía nada.
+
+                <Link> deja que sea el enrutador quien navegue, así que
+                funciona con el que haya montado. */}
             {!isRegister && (
-              <a
-                href="/recuperar-acceso"
+              <Link
+                to="/recuperar-acceso"
               style={{
                 color: 'var(--gold-ink)', fontSize: '0.75rem', letterSpacing: '1.5px',
                 textDecoration: 'none', opacity: 0.75, fontWeight: 600,
@@ -270,7 +281,7 @@ const Auth = () => {
               onMouseLeave={e => e.currentTarget.style.opacity = '0.75'}
             >
               {t('auth.forgot')}
-            </a>
+            </Link>
           )}
         </footer>
         </div>
