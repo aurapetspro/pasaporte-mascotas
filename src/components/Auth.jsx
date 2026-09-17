@@ -135,14 +135,34 @@ const Auth = () => {
             {copiado ? t('recoveryCode.copied') : t('recoveryCode.copy')}
           </button>
 
+          {/* Dónde guardarlo y quién puede usarlo. */}
           <div style={{
             display: 'flex', gap: '0.8rem', alignItems: 'flex-start',
-            padding: '0.9rem 1rem', marginBottom: '1.4rem',
+            padding: '0.9rem 1rem', marginBottom: '0.8rem',
             background: 'rgba(240, 167, 60, 0.10)', borderLeft: '3px solid var(--warn)',
             borderRadius: '0 8px 8px 0',
           }}>
             <p style={{ margin: 0, fontSize: '0.78rem', lineHeight: 1.65, color: 'var(--ink-body)' }}>
               {t('recoveryCode.warning')}
+            </p>
+          </div>
+
+          {/* ── Y qué pasa si lo pierdes ──────────────────────────────────────
+              Esto iba en gris pequeño junto al «solo se enseña una vez», y no
+              es un detalle: es el único estado del que no se sale. Perder el
+              código no duele el día que pasa —la contraseña sigue en la
+              cabeza— y por eso nadie corre a reponerlo. El daño llega meses
+              después, cuando la contraseña se olvida y ya no hay con qué
+              abrir. Hay que decirlo cuando todavía se puede arreglar. */}
+          <div style={{
+            display: 'flex', gap: '0.8rem', alignItems: 'flex-start',
+            padding: '0.9rem 1rem', marginBottom: '1.4rem',
+            background: 'rgba(239, 95, 122, 0.10)', borderLeft: '3px solid var(--danger)',
+            borderRadius: '0 8px 8px 0',
+          }}>
+            <p style={{ margin: 0, fontSize: '0.78rem', lineHeight: 1.65, color: 'var(--ink-body)' }}>
+              <strong style={{ color: '#B3324C' }}>{t('recoveryCode.lostTitle')}</strong>{' '}
+              {t('recoveryCode.lostBody')}
             </p>
           </div>
 
