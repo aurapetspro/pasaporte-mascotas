@@ -102,6 +102,12 @@ const Auth = () => {
             <p style={{ margin: 0, fontSize: '0.82rem', lineHeight: 1.7, color: 'var(--ink-body)' }}>
               {t('recoveryCode.intro')}
             </p>
+            {/* Que se enseña una sola vez va aparte y en gris: es un aviso
+                práctico, no la razón por la que hay que guardarlo. La razón va
+                arriba, con el peso que merece. */}
+            <p style={{ margin: '0.7rem 0 0', fontSize: '0.75rem', lineHeight: 1.6, color: 'var(--ink-muted)' }}>
+              {t('recoveryCode.once')}
+            </p>
           </div>
 
           <div style={{

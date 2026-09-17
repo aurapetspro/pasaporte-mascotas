@@ -136,6 +136,24 @@ if (alta.recoveryCode && typeof vault.recoverWithCode === 'function') {
   vault.lock();
   comprobar('un código inventado NO devuelve el acceso',
     (await vault.recoverWithCode(usuario, 'AURA-0000-0000-0000', 'lo-que-sea')) === null);
+
+  /* ── El código sirve todas las veces que haga falta ────────────────────────
+     Es la diferencia entre una red de seguridad y un solo cartucho. Quien
+     olvida una contraseña suele olvidar también la siguiente, y si el código
+     se gastara al usarlo habría que enseñar uno nuevo justo en ese momento
+     —con el usuario agobiado y con prisa— y volveríamos a depender de que lo
+     guarde bien. Se queda reutilizable a propósito. */
+  vault.lock();
+  const segunda = await vault.recoverWithCode(recuperado ?? usuario, alta.recoveryCode, 'y-otra-más');
+  comprobar('el mismo código sirve una segunda vez', !!segunda);
+  comprobar('y los datos siguen ahí después de dos recuperaciones',
+    JSON.stringify(vault.getScopedData('u3', 'pets')) === JSON.stringify(EXPEDIENTE.pets));
+
+  vault.lock();
+  const tercera = await vault.recoverWithCode(segunda ?? usuario, alta.recoveryCode, 'y-van-tres');
+  comprobar('y una tercera', !!tercera);
+  comprobar('se entra con la última contraseña puesta',
+    (await vault.openSession(tercera ?? usuario, 'y-van-tres')) !== null);
 } else {
   comprobar('el alta entrega un código de recuperación', false, 'todavía no está implementado');
 }
