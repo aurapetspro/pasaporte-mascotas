@@ -97,6 +97,52 @@ caso('vacuna que no está en el protocolo: no se inventa nada', 'cat',
   [['date', '2025-12-12'], ['name', 'algo que no existe']],
   '');
 
+/* ── Corregir un registro ya guardado ────────────────────────────────────────
+   Al guardar no se conserva la marca de «esta fecha la propuso la app», así
+   que al abrir el registro hay que deducirla del propio dato: si la próxima
+   dosis coincide con la que el protocolo habría propuesto, era nuestra.
+
+   Decide qué pasa al corregir la fecha de administración, y las dos ramas
+   tienen que funcionar: arrastrar cuando la fecha era nuestra, y no tocar
+   nada cuando la puso el veterinario. */
+const alEditar = (especie, registro) => {
+  const sug = sugerirProximaDosis(especie, registro.name, registro.date);
+  return { ...registro, nextDoseSugerida: !!sug && sug.fecha === registro.nextDose };
+};
+
+const casoEdicion = (titulo, especie, registro, cambios, esperado) => {
+  const paso = proponer(especie);
+  let f = alEditar(especie, registro);
+  for (const [campo, valor] of cambios) {
+    f = campo === 'nextDose' ? aMano(f, valor) : paso(f, campo, valor);
+  }
+  const bien = f.nextDose === esperado;
+  if (!bien) fallos += 1;
+  console.log(`  ${bien ? 'OK  ' : 'MAL '}  ${titulo}`);
+  if (!bien) console.log(`          esperaba ${esperado}, salió ${f.nextDose || '(vacía)'}`);
+};
+
+console.log('');
+console.log('  Al corregir un registro guardado');
+console.log('  ────────────────────────────────');
+
+/* El caso que reportó Rocío: se equivocó al teclear el día de la vacuna. */
+casoEdicion('corregir la fecha arrastra la próxima dosis', 'dog',
+  { name: 'desparasitación interna', date: '2026-07-15', nextDose: '2026-10-13' },
+  [['date', '2026-07-05']],
+  '2026-10-03');
+
+casoEdicion('corregir el nombre también la recalcula', 'cat',
+  { name: 'trivalente', date: '2025-12-12', nextDose: '2028-12-11' },
+  [['name', 'rabia']],
+  '2026-12-12');
+
+/* Y la otra rama: una fecha que no salió del protocolo es del veterinario. */
+casoEdicion('una fecha ajena al protocolo NO se toca', 'cat',
+  { name: 'trivalente', date: '2025-12-12', nextDose: '2027-03-01' },
+  [['date', '2025-11-01']],
+  '2027-03-01');
+
 console.log('');
 console.log(fallos ? `  ${fallos} comprobaciones fallan.` : '  Todas pasan.');
 console.log('');

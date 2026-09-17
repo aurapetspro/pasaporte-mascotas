@@ -229,7 +229,30 @@ const MedicalHistory = ({ pet, onClose }) => {
      documento adjunto viaja con él para no perderlo al guardar. */
   const editarRegistro = (item) => {
     const { id, document: adjunto, ...campos } = item;
-    setForm({ ...VACIOS[tab], ...campos });
+
+    /* ── ¿La próxima dosis la puso la app o el veterinario? ─────────────────
+       Al guardar no se conserva esa marca, así que al abrir el registro para
+       corregirlo hay que deducirla. Y se puede deducir del propio dato: si la
+       fecha guardada es exactamente la que el protocolo habría propuesto para
+       esa fecha de administración, era nuestra.
+
+       Importa porque decide qué pasa al corregir la fecha. Si la propuso la
+       app, corregir el día de la vacuna tiene que arrastrar la próxima dosis
+       —para eso se está corrigiendo—. Si la escribió el veterinario, no: ese
+       es un dato suyo y manda sobre cualquier calendario.
+
+       Antes no se deducía nada y se trataba todo como escrito a mano, así que
+       arreglar una fecha mal tecleada dejaba la próxima dosis apuntando al
+       cálculo viejo, sin avisar. */
+    const sug = tab === 'vaccines'
+      ? sugerirProximaDosis(pet?.species, campos.name, campos.date)
+      : null;
+
+    setForm({
+      ...VACIOS[tab],
+      ...campos,
+      nextDoseSugerida: !!sug && sug.fecha === campos.nextDose,
+    });
     setEditando(id);
     setDocPreview(adjunto || null);
     setFileError('');
