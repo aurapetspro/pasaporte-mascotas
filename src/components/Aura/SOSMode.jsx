@@ -364,8 +364,21 @@ const SOSMode = ({ pet, pets = [], onActivePetChange, onExit }) => {
         )}
 
         <div className="sos-main-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
-          {/* ── Pet card ── */}
-          <div className="aura-card" style={{ background: 'rgba(255,0,80,0.07)', borderColor: 'var(--aura-neon-pink)', padding: '2.5rem', textAlign: 'center' }}>
+          {/* ── La ficha del animal ──────────────────────────────────────────
+              Una rejilla estira las dos columnas a la misma altura. Como aquí
+              dentro solo hay una foto y un nombre, y al lado va toda la lista
+              de qué hacer, la ficha se convertía en un caserón rosa con el
+              contenido pegado arriba y medio metro de vacío debajo.
+
+              Con alignSelf la tarjeta deja de estirarse: se queda del alto de
+              lo que lleva dentro y se centra frente a la columna larga. Y con
+              un ancho máximo tampoco se ensancha de más en pantallas grandes,
+              que era la otra mitad del problema. */}
+          <div className="aura-card" style={{
+            background: 'rgba(255,0,80,0.07)', borderColor: 'var(--aura-neon-pink)',
+            padding: '2.2rem', textAlign: 'center',
+            alignSelf: 'center', maxWidth: 360, width: '100%', margin: '0 auto',
+          }}>
             <div style={{
               width: 130, height: 130, borderRadius: '50%', margin: '0 auto 1.5rem',
               background: '#FFFFFF', border: '2px solid var(--aura-neon-pink)', overflow: 'hidden',
