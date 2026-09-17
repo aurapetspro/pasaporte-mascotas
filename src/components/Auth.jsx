@@ -345,11 +345,24 @@ const Auth = () => {
                   <KeyRound size={15} style={{ flexShrink: 0 }} />
                   {t('auth.warnTitle')}
                 </p>
-                <p style={{ margin: '0 0 0.6rem', fontSize: '0.78rem', lineHeight: 1.65, color: 'var(--ink-body)' }}>
+                {/* Tres ideas, tres párrafos cortos. Antes era un solo bloque
+                    de seis líneas, y un muro de texto dentro de un recuadro de
+                    aviso se salta entero: la letra importante acababa enterrada
+                    en mitad del párrafo. Cada frase va ahora con el peso que
+                    le toca, y la que no se puede perder va la última y en rojo,
+                    que es donde se para la vista. */}
+                <p style={{ margin: '0 0 0.7rem', fontSize: '0.78rem', lineHeight: 1.65, color: 'var(--ink-body)' }}>
                   {t('auth.warnBody')}
                 </p>
-                <p style={{ margin: 0, fontSize: '0.78rem', lineHeight: 1.65, color: 'var(--ink-body)' }}>
-                  <strong>{t('auth.warnNoBackdoor')}</strong>
+                <p style={{ margin: '0 0 0.7rem', fontSize: '0.78rem', lineHeight: 1.65, color: 'var(--ink-body)' }}>
+                  <strong>{t('auth.warnCode')}</strong>
+                </p>
+                <p style={{
+                  margin: 0, padding: '0.7rem 0.85rem',
+                  fontSize: '0.78rem', lineHeight: 1.6, color: '#B3324C', fontWeight: 600,
+                  background: 'rgba(239, 95, 122, 0.12)', borderRadius: 8,
+                }}>
+                  {t('auth.warnLost')}
                 </p>
               </div>
             )}
