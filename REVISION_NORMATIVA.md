@@ -1,6 +1,6 @@
 # Revisión de requisitos frente a fuentes oficiales
 
-**Fecha de la revisión:** 14 de septiembre de 2026 (sexta pasada)
+**Fecha de la revisión:** 17 de septiembre de 2026 (séptima pasada)
 **Alcance:** requisitos de entrada para perros, gatos, hurones, équidos, conejos
 y reptiles en los cinco países de la app (ES, UK, US, CA, AU), más los
 protocolos de vacunación que calculan el nivel de protección.
@@ -8,7 +8,7 @@ protocolos de vacunación que calculan el nivel de protección.
 **Las aves se retiraron de la aplicación el 14 de septiembre de 2026.** Los
 hallazgos 20 a 22 y 31 a 33 se refieren a requisitos que ya no se muestran; se
 conservan por si algún día vuelven.
-**Estado:** las 35 correcciones están aplicadas en el código.
+**Estado:** las 38 correcciones están aplicadas en el código.
 
 Este documento es el registro de qué se comprobó, contra qué fuente y qué se
 corrigió. Sirve como respaldo de las listas: cualquiera puede seguir los enlaces
@@ -611,3 +611,69 @@ La app lo dice ahora, junto al intervalo, y remite al veterinario.
 | Ámbito | Organismo | Fuente |
 |---|---|---|
 | Vacunación de perros y gatos, 2024 | WSAVA | https://wsava.org/wp-content/uploads/2024/05/2024-Guidelines-for-the-Vaccination-of-Dogs-and-Cats.pdf |
+
+
+---
+
+## Séptima pasada: los números de emergencia — 17 de septiembre de 2026
+
+Aviso de la propietaria: «si voy a viajar a Reino Unido no puede ser el 112».
+
+### 36. El número dependía del GPS, y sin GPS se inventaba uno
+
+La pantalla de SOS resolvía el país por geolocalización. Si el GPS no
+contestaba —dentro de un edificio, sin permiso concedido, en un aeropuerto—
+caía en el 112 y no había forma de corregirlo: ningún selector, ninguna
+lista. El usuario veía «UBICACIÓN NO DISPONIBLE · 112» y se acabó.
+
+El 112 funciona en toda Europa, así que el fallo pasaba desapercibido en
+casa. **Fuera de Europa no sirve para nada**: en Estados Unidos hay que
+marcar el 911 y en Australia el 000. Es decir, fallaba justo donde la
+aplicación dice servir, que es viajando.
+
+Ahora el país se elige a mano, lo elegido manda sobre lo detectado, y la
+elección se recuerda: quien está de viaje la hace una vez, no en cada susto.
+
+### 37. La tabla tenía doce países y dos números equivocados
+
+Contrastada con la Comisión Europea (Your Europe) y con la EENA. El dato que
+simplifica media tabla: **el 112 funciona en los 27 países de la Unión
+Europea**, sin excepción, y además en Albania, Georgia, Islandia,
+Liechtenstein, Macedonia del Norte, Moldavia, Montenegro, Noruega, Reino
+Unido, Serbia, Suiza y Turquía.
+
+La tabla pasa de 12 países a 47. Y se corrigen dos:
+
+| País | Decía | Dice |
+|---|---|---|
+| Francia | 15 | 112, con el 15 como alternativa |
+| Italia | 118 | 112, con el 118 como alternativa |
+
+El 15 y el 118 son los números médicos propios y funcionan, pero a alguien
+de paso le sirve mejor el general: no obliga a acordarse de cuál es cuál. Al
+revés ocurre en el Reino Unido, donde el 999 sigue siendo el principal y va
+delante del 112.
+
+El campo de número alternativo solo se rellena donde la fuente lo confirma.
+En una pantalla de emergencia es mejor quedarse corto que prometer un número
+que no entre.
+
+### 38. «Emergencias veterinarias» no era lo que parecía
+
+El primer recuadro daba el número general de emergencias bajo ese rótulo. No
+es lo mismo: **un 112 o un 911 no mandan un veterinario**. Sirven para lo que
+sí son —un atropello, un incendio, un animal que ha mordido a alguien— y para
+eso hay que llamarlos. Lo veterinario es el recuadro de debajo, el del
+hospital de guardia.
+
+Pasa a llamarse «Emergencias generales», con una línea que lo aclara. Quien
+llama en mitad de un susto no tiene por qué saber esa diferencia.
+
+---
+
+## Fuentes de esta pasada
+
+| Ámbito | Organismo | Fuente |
+|---|---|---|
+| El 112 en la Unión Europea | Comisión Europea · Your Europe | https://europa.eu/youreurope/citizens/travel/security-and-emergencies/emergency/index_en.htm |
+| Países donde funciona el 112 | EENA | https://eena.org/about-112/whats-112-all-about/ |

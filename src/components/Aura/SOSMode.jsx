@@ -4,15 +4,88 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { QRCodeSVG } from 'qrcode.react';
 import { useTranslation } from '../../context/LocalizationContext';
 
-/* ── Emergency number by ISO country code ── */
-const EMERGENCY = {
-  ES: '112', PT: '112', DE: '112', FR: '15', IT: '118',
-  GB: '999', IE: '999',
-  US: '911', CA: '911', MX: '911',
-  AU: '000', NZ: '111',
-};
-const getEmergencyNumber = (countryCode) =>
-  EMERGENCY[countryCode?.toUpperCase()] ?? '112';
+/* ── Números de emergencia ───────────────────────────────────────────────────
+   Contrastado el 17 de septiembre de 2026 con la Comisión Europea (Your
+   Europe) y con la EENA, la asociación europea del número de emergencia.
+
+   Lo que dice la fuente, y simplifica media tabla: el 112 funciona en los 27
+   países de la Unión Europea, sin excepción. Y además en Albania, Georgia,
+   Islandia, Liechtenstein, Macedonia del Norte, Moldavia, Montenegro,
+   Noruega, Reino Unido, Serbia, Suiza y Turquía.
+
+   Fuera de Europa no vale nada. En Estados Unidos hay que marcar el 911, en
+   Australia el 000 y en Japón el 119.
+
+   Criterio para elegir qué número se enseña: el que funcione siempre en ese
+   país. Varios tienen números médicos propios —el 15 en Francia, el 144 en
+   Suiza, el 113 en Noruega— pero a alguien de paso le sirve mejor el 112,
+   que es el general y no obliga a acordarse de cuál es cuál. Donde el número
+   nacional es el principal de verdad, como el 999 británico, va ese delante.
+
+   'alt' solo se rellena cuando la fuente lo confirma. En una pantalla de
+   emergencia es mejor quedarse corto que prometer un número que no entre. */
+const PAISES = [
+  /* ── Unión Europea: el 112 funciona en los 27 ── */
+  { id: 'DE', es: 'Alemania',          en: 'Germany',         numero: '112' },
+  { id: 'AT', es: 'Austria',           en: 'Austria',         numero: '112' },
+  { id: 'BE', es: 'Bélgica',           en: 'Belgium',         numero: '112' },
+  { id: 'BG', es: 'Bulgaria',          en: 'Bulgaria',        numero: '112' },
+  { id: 'CY', es: 'Chipre',            en: 'Cyprus',          numero: '112' },
+  { id: 'HR', es: 'Croacia',           en: 'Croatia',         numero: '112' },
+  { id: 'DK', es: 'Dinamarca',         en: 'Denmark',         numero: '112' },
+  { id: 'SK', es: 'Eslovaquia',        en: 'Slovakia',        numero: '112' },
+  { id: 'SI', es: 'Eslovenia',         en: 'Slovenia',        numero: '112' },
+  { id: 'ES', es: 'España',            en: 'Spain',           numero: '112' },
+  { id: 'EE', es: 'Estonia',           en: 'Estonia',         numero: '112' },
+  { id: 'FI', es: 'Finlandia',         en: 'Finland',         numero: '112' },
+  { id: 'FR', es: 'Francia',           en: 'France',          numero: '112', alt: '15'  },
+  { id: 'GR', es: 'Grecia',            en: 'Greece',          numero: '112' },
+  { id: 'HU', es: 'Hungría',           en: 'Hungary',         numero: '112' },
+  { id: 'IE', es: 'Irlanda',           en: 'Ireland',         numero: '112', alt: '999' },
+  { id: 'IT', es: 'Italia',            en: 'Italy',           numero: '112', alt: '118' },
+  { id: 'LV', es: 'Letonia',           en: 'Latvia',          numero: '112' },
+  { id: 'LT', es: 'Lituania',          en: 'Lithuania',       numero: '112' },
+  { id: 'LU', es: 'Luxemburgo',        en: 'Luxembourg',      numero: '112' },
+  { id: 'MT', es: 'Malta',             en: 'Malta',           numero: '112' },
+  { id: 'NL', es: 'Países Bajos',      en: 'Netherlands',     numero: '112' },
+  { id: 'PL', es: 'Polonia',           en: 'Poland',          numero: '112' },
+  { id: 'PT', es: 'Portugal',          en: 'Portugal',        numero: '112' },
+  { id: 'CZ', es: 'República Checa',   en: 'Czechia',         numero: '112' },
+  { id: 'RO', es: 'Rumanía',           en: 'Romania',         numero: '112' },
+  { id: 'SE', es: 'Suecia',            en: 'Sweden',          numero: '112' },
+
+  /* ── Resto de Europa donde el 112 también funciona ── */
+  { id: 'AL', es: 'Albania',           en: 'Albania',         numero: '112' },
+  { id: 'GE', es: 'Georgia',           en: 'Georgia',         numero: '112' },
+  { id: 'IS', es: 'Islandia',          en: 'Iceland',         numero: '112' },
+  { id: 'LI', es: 'Liechtenstein',     en: 'Liechtenstein',   numero: '112' },
+  { id: 'MK', es: 'Macedonia del Norte', en: 'North Macedonia', numero: '112' },
+  { id: 'MD', es: 'Moldavia',          en: 'Moldova',         numero: '112' },
+  { id: 'ME', es: 'Montenegro',        en: 'Montenegro',      numero: '112' },
+  { id: 'NO', es: 'Noruega',           en: 'Norway',          numero: '112', alt: '113' },
+  { id: 'GB', es: 'Reino Unido',       en: 'United Kingdom',  numero: '999', alt: '112' },
+  { id: 'RS', es: 'Serbia',            en: 'Serbia',          numero: '112' },
+  { id: 'CH', es: 'Suiza',             en: 'Switzerland',     numero: '112', alt: '144' },
+  { id: 'TR', es: 'Turquía',           en: 'Türkiye',         numero: '112' },
+
+  /* ── América ── */
+  { id: 'AR', es: 'Argentina',         en: 'Argentina',       numero: '911' },
+  { id: 'BR', es: 'Brasil',            en: 'Brazil',          numero: '192', alt: '190' },
+  { id: 'CA', es: 'Canadá',            en: 'Canada',          numero: '911' },
+  { id: 'US', es: 'Estados Unidos',    en: 'United States',   numero: '911' },
+  { id: 'MX', es: 'México',            en: 'Mexico',          numero: '911' },
+
+  /* ── Asia y Oceanía ── */
+  { id: 'AU', es: 'Australia',         en: 'Australia',       numero: '000' },
+  { id: 'JP', es: 'Japón',             en: 'Japan',           numero: '119', alt: '110' },
+  { id: 'NZ', es: 'Nueva Zelanda',     en: 'New Zealand',     numero: '111' },
+];
+
+const buscarPais = (codigo) => PAISES.find(p => p.id === codigo?.toUpperCase()) || null;
+
+/* Dónde se recuerda el país elegido a mano. Sobrevive a recargar la página:
+   quien está de viaje lo elige una vez, no en cada urgencia. */
+const CLAVE_PAIS = 'aura_sos_pais';
 
 /* ── Resolución de país 100 % local ──────────────────────────────────────────
    Antes esto consultaba a Nominatim, lo que enviaba la ubicación exacta del
@@ -91,6 +164,7 @@ const buildQRText = (pet, t, unidadPeso) => {
 
 const SOSMode = ({ pet, pets = [], onActivePetChange, onExit }) => {
   const { t, locale, units } = useTranslation();
+  const es = locale === 'es';
   /* local active pet — starts with prop, can be switched without leaving SOS */
   const [activeSosPetId, setActiveSosPetId] = useState(() => pet?.id ?? null);
   const [showSwitcher, setShowSwitcher]     = useState(false);
@@ -106,6 +180,11 @@ const SOSMode = ({ pet, pets = [], onActivePetChange, onExit }) => {
   const [country, setCountry]       = useState(null);
   const [geoStatus, setGeoStatus]   = useState('idle'); // idle | loading | ok | error
   const [showQR, setShowQR]         = useState(false);
+  /* País elegido a mano. Manda sobre lo detectado: quien lo toca sabe mejor
+     que el GPS dónde está, y muchas veces lo toca porque el GPS no contestó. */
+  const [paisManual, setPaisManual] = useState(() => {
+    try { return localStorage.getItem(CLAVE_PAIS) || ''; } catch { return ''; }
+  });
 
   /* ── Geolocation + reverse geocode ── */
   useEffect(() => {
@@ -130,7 +209,13 @@ const SOSMode = ({ pet, pets = [], onActivePetChange, onExit }) => {
     );
   }, []);
 
-  const emergencyNumber = getEmergencyNumber(country);
+  const pais = buscarPais(paisManual) || buscarPais(country);
+  const emergencyNumber = pais?.numero || '112';
+
+  const elegirPais = (id) => {
+    setPaisManual(id);
+    try { id ? localStorage.setItem(CLAVE_PAIS, id) : localStorage.removeItem(CLAVE_PAIS); } catch { /* modo privado */ }
+  };
 
   const handleCall = () => window.open(`tel:${emergencyNumber}`);
 
@@ -171,20 +256,59 @@ const SOSMode = ({ pet, pets = [], onActivePetChange, onExit }) => {
             <h1 style={{ fontSize: '2.2rem', margin: '0 0 4px', fontFamily: 'var(--font-serif)' }}>
               {t('sos.title')}
             </h1>
-            {/* Geo status pill */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              {geoStatus === 'ok'
-                ? <><Wifi size={14} color="var(--cyan-ink)" />
-                    <span style={{ fontSize: '0.74rem', color: 'var(--cyan-ink)', letterSpacing: '1px', fontWeight: 600 }}>
-                      {t('sos.geoOk')} · {country || '…'}  —  {t('sos.emergencyWord')}: {emergencyNumber}
-                    </span></>
-                : geoStatus === 'loading'
-                  ? <span style={{ fontSize: '0.74rem', color: 'var(--gold-ink)', letterSpacing: '1px', fontWeight: 600 }}>{t('sos.geoLoading')}</span>
-                  : <><WifiOff size={14} color="var(--gold-ink)" />
-                      <span style={{ fontSize: '0.74rem', color: 'var(--gold-ink)', letterSpacing: '1px', fontWeight: 600 }}>
-                        {t('sos.geoFail')} · {t('sos.defaultNumber')}: {emergencyNumber}
-                      </span></>}
+            {/* ── Dónde estás ──────────────────────────────────────────────
+                El número cambia con el país, así que esto no es un adorno: es
+                el dato del que depende la llamada. Antes solo lo ponía el GPS,
+                y si no contestaba —dentro de un edificio, sin permiso, en un
+                aeropuerto— se quedaba en el 112 sin que hubiera forma de
+                corregirlo. El 112 vale en toda Europa; en Estados Unidos o en
+                Australia no sirve para nada.
+
+                Ahora se puede elegir a mano, y lo elegido manda sobre lo
+                detectado: quien lo toca sabe dónde está mejor que el GPS. */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
+              {geoStatus === 'loading'
+                ? <span style={{ fontSize: '0.74rem', color: 'var(--gold-ink)', letterSpacing: '1px', fontWeight: 600 }}>{t('sos.geoLoading')}</span>
+                : paisManual
+                  ? <MapPin size={14} color="var(--cyan-ink)" />
+                  : geoStatus === 'ok'
+                    ? <Wifi size={14} color="var(--cyan-ink)" />
+                    : <WifiOff size={14} color="var(--gold-ink)" />}
+
+              <label style={{ fontSize: '0.74rem', letterSpacing: '0.5px', fontWeight: 600, color: 'var(--ink-body)' }}>
+                {t('sos.whereAreYou')}
+              </label>
+
+              <select
+                className="aura-input aura-select"
+                value={pais?.id || ''}
+                onChange={(e) => elegirPais(e.target.value)}
+                style={{ width: 'auto', minWidth: 150, padding: '0.35rem 0.6rem', fontSize: '0.8rem', fontWeight: 600 }}
+              >
+                <option value="">{t('sos.pickCountry')}</option>
+                {[...PAISES]
+                  .sort((a, b) => (es ? a.es : a.en).localeCompare(es ? b.es : b.en, locale))
+                  .map(p => (
+                    <option key={p.id} value={p.id}>{es ? p.es : p.en}</option>
+                  ))}
+              </select>
+
+              <span style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--pink-ink)' }}>
+                {t('sos.emergencyWord')}: {emergencyNumber}
+              </span>
             </div>
+
+            {/* Por qué sale ese país, y cómo cambiarlo */}
+            <p style={{ margin: '0.4rem 0 0', fontSize: '0.72rem', lineHeight: 1.5, color: 'var(--ink-muted)' }}>
+              {!pais
+                ? t('sos.noCountry')
+                : paisManual
+                  ? t('sos.countryManual')
+                  : geoStatus === 'ok'
+                    ? t('sos.countryDetected')
+                    : t('sos.countryGuessed')}
+              {pais?.alt ? ' ' + t('sos.alsoWorks', { numero: pais.alt }) : ''}
+            </p>
           </div>
           <button onClick={onExit} className="btn-aura btn-ghost">
             {t('sos.exit')}
@@ -266,10 +390,15 @@ const SOSMode = ({ pet, pets = [], onActivePetChange, onExit }) => {
             <div className="aura-card" style={{ padding: '1.6rem', display: 'flex', alignItems: 'center', gap: '1.2rem' }}>
               <Phone size={28} color="var(--aura-neon-pink)" />
               <div style={{ flex: 1 }}>
-                <h3 style={{ margin: '0 0 2px', fontSize: '1rem' }}>{t('sos.vetEmergency')}</h3>
-                <p style={{ margin: 0, opacity: 0.6, fontSize: '0.8rem' }}>
+                <h3 style={{ margin: '0 0 2px', fontSize: '1rem' }}>{t('sos.generalEmergency')}</h3>
+                <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--ink-body)' }}>
                   {t('sos.callNumber', { numero: emergencyNumber })}
-                  {country ? ` (${country})` : ''}
+                  {pais ? ` · ${es ? pais.es : pais.en}` : ''}
+                </p>
+                {/* Un 112 no manda un veterinario, y quien llama en mitad de
+                    un susto no tiene por qué saberlo. */}
+                <p style={{ margin: '0.25rem 0 0', fontSize: '0.72rem', lineHeight: 1.45, color: 'var(--ink-muted)' }}>
+                  {t('sos.generalEmergencyHint')}
                 </p>
               </div>
               <button

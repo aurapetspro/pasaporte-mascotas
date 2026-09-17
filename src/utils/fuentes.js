@@ -14,7 +14,7 @@
  */
 
 /** Última vez que las listas se contrastaron contra las webs oficiales. */
-export const FECHA_REVISION = '2026-09-14';
+export const FECHA_REVISION = '2026-09-17';
 
 /** Organismo competente por país. */
 const ORGANISMO = {
