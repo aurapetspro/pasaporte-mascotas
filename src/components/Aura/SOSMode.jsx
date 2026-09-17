@@ -384,48 +384,55 @@ const SOSMode = ({ pet, pets = [], onActivePetChange, onExit }) => {
             )}
           </div>
 
-          {/* ── Actions ── */}
+          {/* ── Qué hacer, y en qué orden ────────────────────────────────────
+              El orden lo es todo en esta pantalla. Antes abría el número
+              general de emergencias, con el botón lleno y arriba del todo, y
+              el veterinario quedaba debajo como una opción más.
+
+              Está al revés. Un 112 no manda un veterinario: lo que salva a un
+              animal es llegar a una clínica de guardia, y eso es lo primero
+              que hay que hacer. El número general sirve para lo que sí es —un
+              atropello, un incendio, una mordedura a una persona— y por eso
+              sigue estando, pero detrás y con menos peso.
+
+              Quien abre esta pantalla está asustado y no va a leer: va a
+              pulsar lo primero grande que vea. Así que lo primero grande tiene
+              que ser lo correcto. */}
           <div style={{ display: 'grid', gap: '1.2rem', alignContent: 'start' }}>
-            {/* Call emergency */}
-            <div className="aura-card" style={{ padding: '1.6rem', display: 'flex', alignItems: 'center', gap: '1.2rem' }}>
-              <Phone size={28} color="var(--aura-neon-pink)" />
-              <div style={{ flex: 1 }}>
-                <h3 style={{ margin: '0 0 2px', fontSize: '1rem' }}>{t('sos.generalEmergency')}</h3>
-                <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--ink-body)' }}>
-                  {t('sos.callNumber', { numero: emergencyNumber })}
-                  {pais ? ` · ${es ? pais.es : pais.en}` : ''}
-                </p>
-                {/* Un 112 no manda un veterinario, y quien llama en mitad de
-                    un susto no tiene por qué saberlo. */}
-                <p style={{ margin: '0.25rem 0 0', fontSize: '0.72rem', lineHeight: 1.45, color: 'var(--ink-muted)' }}>
-                  {t('sos.generalEmergencyHint')}
-                </p>
+
+            {/* ── 1. El veterinario de guardia ── */}
+            <div className="aura-card" style={{
+              padding: '1.8rem',
+              border: '2px solid var(--pink)',
+              background: 'rgba(236, 92, 141, 0.06)',
+            }}>
+              <p style={{
+                margin: '0 0 0.5rem', fontSize: '0.64rem', fontWeight: 800,
+                letterSpacing: '2.5px', textTransform: 'uppercase', color: 'var(--pink-ink)',
+              }}>
+                {t('sos.firstStep')}
+              </p>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '1.2rem' }}>
+                <MapPin size={32} color="var(--pink)" style={{ flexShrink: 0 }} />
+                <div style={{ flex: 1 }}>
+                  <h3 style={{ margin: '0 0 3px', fontSize: '1.15rem', lineHeight: 1.25 }}>
+                    {t('sos.hospital24')}
+                  </h3>
+                  <p style={{ margin: 0, fontSize: '0.8rem', lineHeight: 1.5, color: 'var(--ink-body)' }}>
+                    {t(geoStatus === 'ok' ? 'sos.searchNear' : 'sos.searchMaps')}
+                  </p>
+                </div>
               </div>
               <button
                 className="btn-aura"
-                style={{ whiteSpace: 'nowrap' }}
-                onClick={handleCall}
-              >
-                {t('sos.btnCall')} {emergencyNumber}
-              </button>
-            </div>
-
-            {/* Map */}
-            <div className="aura-card" style={{ padding: '1.6rem', display: 'flex', alignItems: 'center', gap: '1.2rem' }}>
-              <MapPin size={28} color="var(--aura-neon-pink)" />
-              <div style={{ flex: 1 }}>
-                <h3 style={{ margin: '0 0 2px', fontSize: '1rem' }}>{t('sos.hospital24')}</h3>
-                <p style={{ margin: 0, opacity: 0.6, fontSize: '0.8rem' }}>
-                  {t(geoStatus === 'ok' ? 'sos.searchNear' : 'sos.searchMaps')}
-                </p>
-              </div>
-              <button
-                className="btn-aura btn-ghost"
-                style={{ '--btn-accent': 'var(--pink-ink)' }}
+                style={{ width: '100%', marginTop: '1.2rem', padding: '1.1rem', fontSize: '0.82rem' }}
                 onClick={handleMap}
               >
-                {t('sos.btnMap')}
+                {t('sos.btnFindVet')}
               </button>
+              <p style={{ margin: '0.7rem 0 0', fontSize: '0.72rem', lineHeight: 1.5, color: 'var(--ink-muted)' }}>
+                {t('sos.vetHint')}
+              </p>
             </div>
 
             {/* Emergency contacts */}
@@ -445,6 +452,30 @@ const SOSMode = ({ pet, pets = [], onActivePetChange, onExit }) => {
                 </button>
               </div>
             ) : null)}
+
+            {/* ── 2. El número general, que es otra cosa ── */}
+            <div className="aura-card" style={{ padding: '1.6rem', display: 'flex', alignItems: 'center', gap: '1.2rem' }}>
+              <Phone size={24} color="var(--ink-muted)" />
+              <div style={{ flex: 1 }}>
+                <h3 style={{ margin: '0 0 2px', fontSize: '0.95rem' }}>{t('sos.generalEmergency')}</h3>
+                <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--ink-body)' }}>
+                  {t('sos.callNumber', { numero: emergencyNumber })}
+                  {pais ? ` · ${es ? pais.es : pais.en}` : ''}
+                </p>
+                {/* Un 112 no manda un veterinario, y quien llama en mitad de
+                    un susto no tiene por qué saberlo. */}
+                <p style={{ margin: '0.25rem 0 0', fontSize: '0.72rem', lineHeight: 1.45, color: 'var(--ink-muted)' }}>
+                  {t('sos.generalEmergencyHint')}
+                </p>
+              </div>
+              <button
+                className="btn-aura btn-ghost"
+                style={{ whiteSpace: 'nowrap', '--btn-accent': 'var(--pink-ink)' }}
+                onClick={handleCall}
+              >
+                {t('sos.btnCall')} {emergencyNumber}
+              </button>
+            </div>
 
             {/* QR toggle */}
             <button
