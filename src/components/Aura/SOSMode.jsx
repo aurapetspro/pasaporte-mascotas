@@ -83,6 +83,12 @@ const PAISES = [
 
 const buscarPais = (codigo) => PAISES.find(p => p.id === codigo?.toUpperCase()) || null;
 
+/* Los cinco destinos que cubre el pasaporte, más los países por los que se
+   pasa de camino: Francia y Portugal por carretera, y Alemania y Países Bajos
+   por las escalas de avión. Van agrupados arriba del selector porque son los
+   que se van a elegir casi siempre; los demás siguen estando, detrás. */
+const HABITUALES = ['ES', 'GB', 'US', 'CA', 'AU', 'FR', 'PT', 'DE', 'NL'];
+
 /* Dónde se recuerda el país elegido a mano. Sobrevive a recargar la página:
    quien está de viaje lo elige una vez, no en cada urgencia. */
 const CLAVE_PAIS = 'aura_sos_pais';
@@ -285,12 +291,35 @@ const SOSMode = ({ pet, pets = [], onActivePetChange, onExit }) => {
                 onChange={(e) => elegirPais(e.target.value)}
                 style={{ width: 'auto', minWidth: 150, padding: '0.35rem 0.6rem', fontSize: '0.8rem', fontWeight: 600 }}
               >
+                {/* ── Los de siempre arriba, el resto debajo ────────────────
+                    La lista larga existe porque el SOS no pregunta a dónde
+                    vas, sino dónde estás: yendo en coche a Reino Unido se pasa
+                    por Francia, y una escala en Fráncfort son tres horas en
+                    Alemania. Con el animal malo, el número que hace falta es
+                    el del sitio donde estás parado.
+
+                    Pero buscar entre cuarenta y siete nombres con un susto
+                    encima es lento. Así que los cinco del pasaporte y los
+                    vecinos por los que se pasa de camino van en un grupo
+                    aparte, arriba del todo. El resto sigue estando, por si
+                    acaso, pero sin estorbar. */}
                 <option value="">{t('sos.pickCountry')}</option>
-                {[...PAISES]
-                  .sort((a, b) => (es ? a.es : a.en).localeCompare(es ? b.es : b.en, locale))
-                  .map(p => (
-                    <option key={p.id} value={p.id}>{es ? p.es : p.en}</option>
-                  ))}
+
+                <optgroup label={t('sos.groupCommon')}>
+                  {PAISES.filter(p => HABITUALES.includes(p.id))
+                    .sort((a, b) => HABITUALES.indexOf(a.id) - HABITUALES.indexOf(b.id))
+                    .map(p => (
+                      <option key={p.id} value={p.id}>{es ? p.es : p.en}</option>
+                    ))}
+                </optgroup>
+
+                <optgroup label={t('sos.groupRest')}>
+                  {PAISES.filter(p => !HABITUALES.includes(p.id))
+                    .sort((a, b) => (es ? a.es : a.en).localeCompare(es ? b.es : b.en, locale))
+                    .map(p => (
+                      <option key={p.id} value={p.id}>{es ? p.es : p.en}</option>
+                    ))}
+                </optgroup>
               </select>
 
               <span style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--pink-ink)' }}>
