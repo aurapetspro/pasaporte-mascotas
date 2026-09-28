@@ -6,6 +6,7 @@ import gatoYPerro from '../assets/gato-y-perro.png';
 // ─── Portal Modal ─────────────────────────────────────────────────────────────
 export const IntroVideoModal = ({ isOpen, onContinue }) => {
   const [btnHovered, setBtnHovered] = useState(false);
+  const [fotoRota, setFotoRota] = useState(false);
 
   if (!isOpen) return null;
 
@@ -173,19 +174,31 @@ export const IntroVideoModal = ({ isOpen, onContinue }) => {
 
           {/* ── El animal ocupa el area central reservada ── */}
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 0 }}>
-            <motion.img
-              src={gatoYPerro}
-              alt="Un perro y un gato con sus medallas AURA"
-              initial={{ opacity: 0, y: 18 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 1.1, delay: 0.4, ease: 'easeOut' }}
-              style={{
-                maxWidth: 'min(420px, 78vw)',
-                maxHeight: '100%',
-                width: 'auto', height: 'auto', objectFit: 'contain',
-                filter: 'drop-shadow(0 16px 32px rgba(42, 45, 124, 0.20))',
-              }}
-            />
+            {/* Si la imagen no llega, el navegador escribe el texto
+                alternativo a tamaño completo en mitad de la pantalla, con su
+                icono de imagen rota. Queda peor que no poner nada, y encima
+                parece que la aplicación está estropeada cuando lo único que ha
+                fallado es un adorno.
+
+                El texto alternativo se queda —lo necesita quien usa un lector
+                de pantalla—, pero si la carga falla se esconde la imagen y no
+                pasa nada: la pantalla sigue teniendo su título y su botón. */}
+            {!fotoRota && (
+              <motion.img
+                src={gatoYPerro}
+                alt="Un perro y un gato con sus medallas AURA"
+                onError={() => setFotoRota(true)}
+                initial={{ opacity: 0, y: 18 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 1.1, delay: 0.4, ease: 'easeOut' }}
+                style={{
+                  maxWidth: 'min(420px, 78vw)',
+                  maxHeight: '100%',
+                  width: 'auto', height: 'auto', objectFit: 'contain',
+                  filter: 'drop-shadow(0 16px 32px rgba(42, 45, 124, 0.20))',
+                }}
+              />
+            )}
           </div>
 
           {/* ── Botón ENTRAR — parte inferior ── */}
