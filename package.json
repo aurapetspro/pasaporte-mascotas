@@ -13,6 +13,7 @@
     "probar": "node scripts/probar-vacunas.mjs",
     "probar-boveda": "node scripts/probar-boveda.mjs",
     "probar-copia": "node scripts/probar-copia.mjs",
+    "probar-sincronizacion": "node scripts/probar-sincronizacion.mjs",
     "preview": "vite preview"
   },
   "dependencies": {
