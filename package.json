@@ -12,6 +12,7 @@
     "castellano": "node scripts/buscar-castellano.mjs",
     "probar": "node scripts/probar-vacunas.mjs",
     "probar-boveda": "node scripts/probar-boveda.mjs",
+    "probar-copia": "node scripts/probar-copia.mjs",
     "preview": "vite preview"
   },
   "dependencies": {

@@ -74,6 +74,24 @@ export const translations = {
       errGeneric: "No se ha podido completar la operación. Inténtalo de nuevo",
     },
 
+    backup: {
+      restore: "Restaurar una copia",
+      restoreHint: "Recupera un archivo que descargaste antes",
+      found: "Esto es lo que trae el archivo",
+      summary: "{mascotas} mascota(s) y {registros} registros médicos.",
+      fromDate: "Copia del {fecha}.",
+      adds: "Se añadirán a lo que ya tengas: no se borra nada. Si el archivo trae mascotas que ya están, aparecerán repetidas y podrás quitar las que sobren.",
+      confirm: "RESTAURAR",
+      restoring: "RESTAURANDO…",
+      done: "Restauradas {n} mascota(s) con su historial.",
+      seeThem: "VER MIS MASCOTAS",
+      partial: "llegaron a entrar {n}",
+      errRead: "No se ha podido leer el archivo.",
+      errNotJson: "Ese archivo está dañado o no es una copia de AURA.",
+      errNotOurs: "Ese archivo no es una copia de AURA. Busca el que descargaste con «Portabilidad de datos».",
+      errEmpty: "Esa copia no tiene ninguna mascota dentro.",
+    },
+
     security: {
       title: "Seguridad de la cuenta",
       changePass: "Cambiar la contraseña",
@@ -415,6 +433,24 @@ export const translations = {
       errEmailTaken: "An account with that email already exists",
       errBadCredentials: "That email or password is not valid",
       errGeneric: "The operation could not be completed. Please try again",
+    },
+
+    backup: {
+      restore: "Restore a backup",
+      restoreHint: "Bring back a file you downloaded earlier",
+      found: "Here is what the file contains",
+      summary: "{mascotas} pet(s) and {registros} medical entries.",
+      fromDate: "Backup from {fecha}.",
+      adds: "They will be added to what you already have: nothing is deleted. If the file holds pets you already have, they will appear twice and you can remove the extras.",
+      confirm: "RESTORE",
+      restoring: "RESTORING…",
+      done: "Restored {n} pet(s) with their history.",
+      seeThem: "SEE MY PETS",
+      partial: "{n} did get through",
+      errRead: "The file could not be read.",
+      errNotJson: "That file is damaged, or it is not an AURA backup.",
+      errNotOurs: "That file is not an AURA backup. Look for the one you downloaded with Data Portability.",
+      errEmpty: "That backup has no pets in it.",
     },
 
     security: {

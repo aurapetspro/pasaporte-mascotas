@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
-import { ShieldCheck, Lock, EyeOff, Download, Trash2, ChevronRight, FileText, AlertTriangle, ExternalLink, X, BookOpen, KeyRound } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import { ShieldCheck, Lock, EyeOff, Download, Trash2, ChevronRight, FileText, AlertTriangle, ExternalLink, X, BookOpen, KeyRound, Upload } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTranslation } from '../../context/LocalizationContext';
 import { useAuth } from '../../context/AuthContext';
 import { storage } from '../../utils/storage';
 import { vault } from '../../utils/vault';
+import { leerCopia as revisarCopia, prepararMascota } from '../../utils/copia';
 import jsPDF from 'jspdf';
 import { PawScatter } from './Decorations';
 
@@ -742,6 +743,11 @@ const PrivacyVault = () => {
 
   const [showDestruction, setShowDestruction] = useState(false);
   const [destroyed, setDestroyed]             = useState(false);
+  const [copia, setCopia]           = useState(null);   // lo que trae el archivo elegido
+  const [avisoCopia, setAvisoCopia] = useState('');
+  const [restaurando, setRestaurando] = useState(false);
+  const [restaurado, setRestaurado] = useState(0);
+  const archivoCopiaRef = useRef(null);
   const [legalModal, setLegalModal]           = useState(null); // 'hipaa' | 'gdpr' | null
 
   const legalContent = getLegalContent(locale);
@@ -762,6 +768,58 @@ const PrivacyVault = () => {
       })),
     };
     downloadJSON(payload, `AURA_datos_${new Date().toLocaleDateString('es-ES').replace(/\//g,'-')}.json`);
+  };
+
+  /* ── Leer el archivo y enseñar qué trae ──────────────────────────────────
+     Solo lee y cuenta. No escribe nada todavía: hasta que el usuario no
+     confirma lo que ve, su expediente no se toca. */
+  const leerCopia = (e) => {
+    const archivo = e.target.files?.[0];
+    e.target.value = '';           // deja volver a elegir el mismo archivo
+    if (!archivo) return;
+
+    setAvisoCopia(''); setRestaurado(0); setCopia(null);
+
+    const lector = new FileReader();
+    lector.onerror = () => setAvisoCopia(t('backup.errRead'));
+    lector.onload = (ev) => {
+      const revisada = revisarCopia(ev.target.result);
+      if (!revisada.ok) { setAvisoCopia(t(`backup.${revisada.error}`)); return; }
+
+      setCopia({
+        ...revisada,
+        fecha: revisada.fecha
+          ? new Date(revisada.fecha).toLocaleDateString(locale === 'es' ? 'es-ES' : 'en-GB')
+          : null,
+      });
+    };
+    lector.readAsText(archivo);
+  };
+
+  /* ── Meterlo en la bóveda ──────────────────────────────────────────────── */
+  const restaurarCopia = async () => {
+    if (!copia || !user) return;
+    setRestaurando(true);
+    setAvisoCopia('');
+    let hechas = 0;
+    try {
+      for (const mascota of copia.pets) {
+        const { ficha, historial } = prepararMascota(mascota, user.id, Date.now() + hechas);
+        await storage.savePet(user.id, ficha);
+        if (historial) await storage.saveHistory(user.id, ficha.id, historial);
+        hechas += 1;
+      }
+      setCopia(null);
+      setRestaurado(hechas);
+    } catch (err) {
+      /* Si falla a media importación, lo ya escrito se queda: son mascotas
+         válidas. Se dice cuántas entraron para que se sepa por dónde va. */
+      const clave = `errors.${err?.name}`;
+      const texto = t(clave);
+      setAvisoCopia((texto === clave ? (err?.message || '') : texto) + (hechas ? ` (${t('backup.partial', { n: hechas })})` : ''));
+    } finally {
+      setRestaurando(false);
+    }
   };
 
   const handleExportPDF = () => {
@@ -982,6 +1040,86 @@ const PrivacyVault = () => {
                 </div>
                 <ChevronRight size={17} />
               </button>
+
+              {/* ── Restaurar una copia ──────────────────────────────────────
+                  La otra mitad del botón de arriba, que faltaba. Sacar los
+                  datos sin poder volver a meterlos convierte la copia de
+                  seguridad en un adorno: quien cambia de móvil se queda con el
+                  archivo en la mano y ningún sitio donde ponerlo. */}
+              <button className="btn-aura btn-ghost"
+                style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', textAlign: 'left', '--btn-accent': 'var(--cyan-ink)' }}
+                onClick={() => archivoCopiaRef.current?.click()}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem' }}>
+                  <Upload size={16} />
+                  <div style={{ textAlign: 'left' }}>
+                    <span style={{ display: 'block' }}>{t('backup.restore')}</span>
+                    <span style={{ fontSize: '0.65rem', letterSpacing: '1px', opacity: 0.85 }}>
+                      {t('backup.restoreHint')}
+                    </span>
+                  </div>
+                </div>
+                <ChevronRight size={17} />
+              </button>
+              <input ref={archivoCopiaRef} type="file" accept=".json,application/json"
+                style={{ display: 'none' }} onChange={leerCopia} />
+
+              {/* Qué trae el archivo, antes de tocar nada */}
+              {copia && (
+                <div style={{
+                  padding: '1rem 1.1rem', borderRadius: 10,
+                  background: 'rgba(67, 191, 199, 0.08)', border: '1px solid rgba(67, 191, 199, 0.4)',
+                }}>
+                  <p style={{ margin: '0 0 0.4rem', fontSize: '0.8rem', fontWeight: 700, color: 'var(--cyan-ink)' }}>
+                    {t('backup.found')}
+                  </p>
+                  <p style={{ margin: '0 0 0.9rem', fontSize: '0.8rem', lineHeight: 1.6, color: 'var(--ink-body)' }}>
+                    {t('backup.summary', { mascotas: copia.mascotas, registros: copia.registros })}
+                    {copia.fecha ? ' ' + t('backup.fromDate', { fecha: copia.fecha }) : ''}
+                  </p>
+                  <p style={{ margin: '0 0 0.9rem', fontSize: '0.74rem', lineHeight: 1.55, color: 'var(--ink-muted)' }}>
+                    {t('backup.adds')}
+                  </p>
+                  <div style={{ display: 'flex', gap: '0.7rem' }}>
+                    <button className="btn-aura btn-ghost" style={{ flex: 1, fontSize: '0.72rem' }}
+                      onClick={() => setCopia(null)} disabled={restaurando}>
+                      {t('common.cancel')}
+                    </button>
+                    <button className="btn-aura" style={{ flex: 2, fontSize: '0.72rem' }}
+                      onClick={restaurarCopia} disabled={restaurando}>
+                      {restaurando ? t('backup.restoring') : t('backup.confirm')}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {avisoCopia && (
+                <p role="alert" style={{
+                  margin: 0, padding: '0.7rem 0.9rem', fontSize: '0.78rem', lineHeight: 1.6,
+                  background: 'rgba(239, 95, 122, 0.10)', borderLeft: '3px solid var(--danger)',
+                  borderRadius: '0 8px 8px 0', color: 'var(--ink-body)',
+                }}>
+                  {avisoCopia}
+                </p>
+              )}
+
+              {restaurado > 0 && (
+                <div style={{
+                  padding: '0.9rem 1rem', borderRadius: '0 8px 8px 0',
+                  background: 'rgba(63, 191, 160, 0.10)', borderLeft: '3px solid var(--ok)',
+                }}>
+                  <p style={{ margin: '0 0 0.7rem', fontSize: '0.8rem', lineHeight: 1.6, color: 'var(--ink-body)' }}>
+                    {t('backup.done', { n: restaurado })}
+                  </p>
+                  {/* La lista de mascotas se leyó al abrir la pantalla, así que
+                      las recién metidas no aparecen hasta recargar. Antes que
+                      dejar al usuario mirando un expediente que parece vacío,
+                      se le da el botón. */}
+                  <button className="btn-aura" style={{ fontSize: '0.72rem' }}
+                    onClick={() => window.location.reload()}>
+                    {t('backup.seeThem')}
+                  </button>
+                </div>
+              )}
 
               <button className="btn-aura"
                 style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', textAlign: 'left' }}
