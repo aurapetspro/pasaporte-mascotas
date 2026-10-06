@@ -3,3 +3,8 @@
 *.jpeg filter=lfs diff=lfs merge=lfs -text
 *.gif filter=lfs diff=lfs merge=lfs -text
 *.webp filter=lfs diff=lfs merge=lfs -text
+
+# Tipografías: binario puro. Sin esto, una conversión de fin de línea en otra
+# máquina las corrompe y la aplicación se queda sin letras.
+*.woff2 -text
+*.woff -text

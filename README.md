@@ -136,5 +136,9 @@ grep -oE 'VITE_[A-Z_]+'         dist/assets/*.js   # sin resultados
 
 ## 📄 Licencia
 
-© 2026 **Rodigital Advance** · Todos los derechos reservados  
-Proyecto presentado para certificación de Vibe Coding.
+**Software propietario.** © 2026 Rodigital Advance · Todos los derechos reservados.
+
+No se concede ningún derecho de uso, copia, modificación, distribución, venta ni
+desarrollo derivado sin autorización previa, expresa y por escrito. El texto
+íntegro está en [LICENSE](./LICENSE), que es el único documento vinculante en
+esta materia.

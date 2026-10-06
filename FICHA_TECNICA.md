@@ -541,29 +541,25 @@ Cada 15 minutos → GET https://rociogf-aura-pets-final.static.hf.space
 
 ## 10. Licencia / License
 
-```
-MIT License
+**Software propietario. Todos los derechos reservados.**
+**Proprietary software. All rights reserved.**
 
-Copyright (c) 2026 Rodigital Advance
+**ES:** El código, el diseño, los textos, la documentación y el registro de
+verificación normativa son propiedad exclusiva de Rodigital Advance. No se
+concede ningún derecho de uso, copia, modificación, distribución, venta ni
+desarrollo derivado sin autorización previa, expresa y por escrito. El texto
+íntegro de la licencia está en el archivo `LICENSE` en la raíz del repositorio,
+que es el único documento vinculante en esta materia.
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+**EN:** The code, design, texts, documentation and regulatory verification
+register are the exclusive property of Rodigital Advance. No right to use,
+copy, modify, distribute, sell or create derivative works is granted without
+prior express written authorisation. The full licence text is in the `LICENSE`
+file at the root of the repository, which is the only binding document on this
+matter.
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-THE SOFTWARE.
-```
+Las dependencias de terceros conservan sus respectivas licencias.
+Third-party dependencies retain their respective licences.
 
 ---
 
@@ -579,7 +575,7 @@ It is declared that the application **AURA Pets — Global Health Passport** has
 - ✅ **GDPR** — Reglamento UE 2016/679
 - ✅ **CCPA** — California Consumer Privacy Act § 1798.100
 - ✅ **LOPD-GDD** — Ley Orgánica 3/2018 (España)
-- ✅ **MIT License** — Software libre / Free software
+- ✅ **Licencia propietaria** — todos los derechos reservados / all rights reserved
 - ✅ **Accesibilidad universal** — Responsive PWA, cross-browser, cross-platform
 
 ---

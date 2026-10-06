@@ -26,7 +26,10 @@ export const IntroVideoModal = ({ isOpen, onContinue }) => {
         }}
       >
         <style>{`
-          @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Inter:wght@300;400&display=swap');
+          /* Aquí había un @import a Google Fonts pidiendo Playfair e Inter otra
+             vez. Sobraba: las dos ya vienen declaradas en fuentes.css, desde
+             nuestro propio dominio. Lo único que añadía era una petición a un
+             tercero en la primera pantalla que ve un usuario nuevo. */
           @keyframes aura-nebula {
             0%   { opacity: 0.70; transform: scale(1)    translate(0, 0)         rotate(0deg); }
             50%  { opacity: 1.00; transform: scale(1.14) translate(4vw, 2.5vw)   rotate(6deg); }

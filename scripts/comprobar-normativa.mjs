@@ -73,20 +73,40 @@ const comprobar = async (url) => {
     const rechaza = [401, 403, 429].includes(r.status);
     return { url, estado: r.status, veredicto: r.ok ? 'ok' : rechaza ? 'robots' : 'rota' };
   } catch (err) {
-    return {
-      url,
-      estado: err.name === 'AbortError' ? 'sin respuesta' : 'error de red',
-      veredicto: 'rota',
-    };
+    if (err.name === 'AbortError') {
+      return { url, estado: 'sin respuesta', veredicto: 'rota' };
+    }
+    /* Un fallo de certificado NO significa que el enlace esté roto. Significa
+       que algo entre esta máquina y el ministerio está interviniendo la
+       conexión —antivirus, proxy de empresa, cortafuegos— y presenta un
+       certificado que Node no reconoce, aunque el navegador sí lo acepte
+       porque usa el almacén de Windows.
+       Darlo por roto es peor que no comprobarlo: manda a buscar un enlace que
+       está perfectamente en pie, y al tercer aviso falso ya no se hace caso de
+       los avisos de verdad. */
+    const codigo = err.cause?.code || err.code || '';
+    const esCertificado = [
+      'SELF_SIGNED_CERT_IN_CHAIN',
+      'DEPTH_ZERO_SELF_SIGNED_CERT',
+      'UNABLE_TO_VERIFY_LEAF_SIGNATURE',
+      'UNABLE_TO_GET_ISSUER_CERT_LOCALLY',
+      'ERR_TLS_CERT_ALTNAME_INVALID',
+      'CERT_HAS_EXPIRED',
+    ].includes(codigo);
+    if (esCertificado) {
+      return { url, estado: 'certificado', veredicto: 'local' };
+    }
+    return { url, estado: codigo || 'error de red', veredicto: 'rota' };
   }
 };
 
 const resultados = await Promise.all(urls.map(comprobar));
 const rotas   = resultados.filter(r => r.veredicto === 'rota');
 const arobots = resultados.filter(r => r.veredicto === 'robots');
+const locales = resultados.filter(r => r.veredicto === 'local');
 
-const ORDEN = { rota: 0, robots: 1, ok: 2 };
-const MARCA = { rota: 'ROTA', robots: 'a ojo', ok: 'OK  ' };
+const ORDEN = { rota: 0, robots: 1, local: 2, ok: 3 };
+const MARCA = { rota: 'ROTA', robots: 'a ojo', local: 'equipo', ok: 'OK  ' };
 for (const r of resultados.sort((a, b) => ORDEN[a.veredicto] - ORDEN[b.veredicto])) {
   console.log(`  ${MARCA[r.veredicto]}  ${String(r.estado).padEnd(12)} ${r.url}`);
 }
@@ -101,6 +121,11 @@ if (rotas.length) {
 }
 if (arobots.length) {
   console.log(`  ${arobots.length} rechazan consultas automáticas: hay que abrirlas a mano de vez en cuando.`);
+}
+if (locales.length) {
+  console.log(`  ${locales.length} no se han podido comprobar desde este equipo: algo intercepta`);
+  console.log('  la conexión segura (antivirus o proxy). El enlace no está roto por eso;');
+  console.log('  ábrelo en el navegador para confirmarlo.');
 }
 console.log('');
 
